@@ -779,7 +779,7 @@ new class extends Component
             class="mb-4 space-y-3"
             x-data="{ filtrosAbertos: false }"
         >
-            <div class="tarefas-list-toolbar">
+            <div class="page-list-toolbar-row">
                 <div class="min-w-0">
                     <x-input
                         wire:model.live.debounce.300ms="busca"

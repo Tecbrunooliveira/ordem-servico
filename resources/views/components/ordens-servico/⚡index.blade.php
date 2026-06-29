@@ -1276,28 +1276,26 @@ new class extends Component
             class="mb-4 space-y-3"
             x-data="{ filtrosAbertos: false }"
         >
-            <div class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-                <div class="flex flex-1 flex-col gap-3 lg:flex-row lg:items-end">
-                    <div class="flex-1">
-                        <x-input
-                            wire:model.live.debounce.300ms="busca"
-                            icon="magnifying-glass"
-                            label="Pesquisar"
-                            placeholder="OS, título, cliente ou descrição"
-                        />
-                    </div>
-
-                    <button
-                        type="button"
-                        x-on:click="filtrosAbertos = ! filtrosAbertos"
-                        class="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-                    >
-                        <x-icon name="plus" class="h-4 w-4 transition-transform" x-bind:class="filtrosAbertos && 'rotate-45'" />
-                        Filtros
-                    </button>
+            <div class="page-list-toolbar-row">
+                <div class="min-w-0">
+                    <x-input
+                        wire:model.live.debounce.300ms="busca"
+                        icon="magnifying-glass"
+                        label="Pesquisar"
+                        placeholder="OS, título, cliente ou descrição"
+                    />
                 </div>
 
-                <x-button primary icon="plus" label="Nova Ordem" wire:click="create" />
+                <button
+                    type="button"
+                    x-on:click="filtrosAbertos = ! filtrosAbertos"
+                    class="inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                >
+                    <x-icon name="plus" class="h-4 w-4 transition-transform" x-bind:class="filtrosAbertos && 'rotate-45'" />
+                    Filtros
+                </button>
+
+                <x-button primary icon="plus" label="Nova Ordem" wire:click="create" class="!w-auto shrink-0 whitespace-nowrap" />
             </div>
 
             <div
@@ -1339,8 +1337,7 @@ new class extends Component
             </div>
         </div>
 
-        <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div class="overflow-x-auto">
+        <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
                 <table class="w-full text-left text-sm">
                     <thead class="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
                         <tr>
@@ -1492,30 +1489,17 @@ new class extends Component
                                             <x-icon name="trash" class="h-3.5 w-3.5" />
                                         </button>
 
-                                        <x-dropdown
-                                            position="bottom-end"
-                                            width="sm"
-                                            wire:key="ordem-menu-{{ $ordem['id'] }}"
-                                        >
-                                            <x-slot name="trigger">
-                                                <button
-                                                    type="button"
-                                                    title="Mais opções"
-                                                    class="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 hover:text-brand-600"
-                                                >
-                                                    <x-icon name="ellipsis-vertical" class="h-3.5 w-3.5" />
-                                                </button>
-                                            </x-slot>
-
+                                        <x-table-action-menu title="Mais opções" wire:key="ordem-menu-{{ $ordem['id'] }}">
                                             <button
                                                 type="button"
+                                                x-on:click="close()"
                                                 wire:click.stop="gerarPdf({{ $ordem['id'] }})"
-                                                class="flex w-full cursor-pointer items-center rounded-md px-4 py-2 text-sm text-secondary-600 transition-colors duration-150 hover:bg-secondary-100 hover:text-secondary-900"
+                                                class="flex w-full items-center rounded-md px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
                                             >
-                                                <x-icon name="document-arrow-down" class="mr-2 h-5 w-5" />
+                                                <x-icon name="document-arrow-down" class="mr-2 h-5 w-5 shrink-0" />
                                                 Gerar PDF
                                             </button>
-                                        </x-dropdown>
+                                        </x-table-action-menu>
                                     </div>
                                 </td>
                             </tr>
@@ -1543,7 +1527,6 @@ new class extends Component
                         </tr>
                     </tfoot>
                 </table>
-            </div>
         </div>
     @endif
 
