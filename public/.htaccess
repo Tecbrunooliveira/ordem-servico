@@ -5,6 +5,9 @@
 
     RewriteEngine On
 
+    # Hostinger / subpasta: descomente e ajuste se as rotas não funcionarem
+    # RewriteBase /osv2/public
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

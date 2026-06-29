@@ -20,5 +20,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         \Illuminate\Support\Facades\App::setLocale('pt_BR');
+
+        if (! $this->app->runningInConsole() && ($url = config('app.url'))) {
+            \Illuminate\Support\Facades\URL::forceRootUrl($url);
+        }
     }
 }
