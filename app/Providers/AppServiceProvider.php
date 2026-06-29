@@ -25,22 +25,12 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
 
-        $appUrl = config('app.url');
-
-        if ($appUrl) {
-            \Illuminate\Support\Facades\URL::forceRootUrl($appUrl);
-
-            if (str_starts_with($appUrl, 'https://')) {
-                \Illuminate\Support\Facades\URL::forceScheme('https');
-            }
+        if (str_starts_with((string) config('app.url'), 'https://')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
         }
 
-        $assetUrl = env('ASSET_URL') ?: $appUrl;
-
-        if ($assetUrl) {
-            \Illuminate\Support\Facades\Vite::createAssetPathsUsing(
-                fn (string $path, ?bool $secure) => rtrim($assetUrl, '/').'/'.ltrim($path, '/')
-            );
-        }
+        \Illuminate\Support\Facades\Vite::createAssetPathsUsing(
+            fn (string $path, ?bool $secure) => asset($path)
+        );
     }
 }

@@ -14,10 +14,8 @@
 
 <aside
     id="app-sidebar"
-    class="fixed inset-y-0 left-0 z-30 flex h-screen shrink-0 flex-col overflow-hidden bg-sidebar text-sidebar-text transition-all duration-300 ease-in-out lg:sticky lg:top-0 lg:z-auto"
-    :class="sidebarOpen
-        ? 'w-64 translate-x-0'
-        : 'w-64 -translate-x-full lg:w-[4.5rem] lg:translate-x-0'"
+    class="fixed inset-y-0 left-0 z-30 flex h-screen w-64 shrink-0 -translate-x-full flex-col overflow-hidden bg-sidebar text-sidebar-text transition-all duration-300 ease-in-out lg:relative lg:z-auto lg:w-[4.5rem] lg:shrink-0 lg:translate-x-0"
+    :class="sidebarOpen ? '!translate-x-0 lg:!w-64' : ''"
 >
     <div
         class="flex shrink-0 items-center border-b border-white/10 py-5 transition-all duration-300"

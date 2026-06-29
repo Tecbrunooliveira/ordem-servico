@@ -6,6 +6,7 @@
 @source '../../vendor/wireui/wireui/src/Components/**/*.php';
 @source '../../vendor/wireui/wireui/src/views/**/*.blade.php';
 @source '../views/**/*.blade.php';
+@source inline("lg:relative lg:translate-x-0 lg:w-[4.5rem] lg:shrink-0 -translate-x-full fixed");
 
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
@@ -113,6 +114,28 @@
     scrollbar-width: thin;
     scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
     overscroll-behavior: contain;
+}
+
+@media (min-width: 64rem) {
+    #app-layout-shell {
+        display: flex;
+        min-height: 100vh;
+    }
+
+    #app-sidebar {
+        position: relative;
+        inset: auto;
+        transform: translateX(0);
+        flex-shrink: 0;
+        width: 4.5rem;
+        z-index: auto;
+    }
+
+    #app-layout-main {
+        flex: 1 1 0%;
+        min-width: 0;
+        width: 100%;
+    }
 }
 
 .sidebar-nav::-webkit-scrollbar {
