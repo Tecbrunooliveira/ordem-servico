@@ -15,7 +15,7 @@
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
-    <wireui:styles />
+    <link href="{{ asset('vendor/wireui/wireui.css') }}" rel="stylesheet" type="text/css">
 </head>
 <body class="h-full bg-slate-50 text-slate-800 antialiased">
     @if (session('show_splash'))
@@ -55,7 +55,18 @@
     </div>
 
     @livewireScripts
-    <wireui:scripts />
+    <script src="{{ asset('vendor/wireui/wireui.js') }}" defer></script>
+    <script>
+        window.Wireui = {
+            cache: {},
+            hook(hook, callback) {
+                window.addEventListener(`wireui:${hook}`, () => callback())
+            },
+            dispatchHook(hook) {
+                window.dispatchEvent(new Event(`wireui:${hook}`))
+            }
+        }
+    </script>
     @stack('scripts')
 </body>
 </html>
