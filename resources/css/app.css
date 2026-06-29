@@ -1,0 +1,340 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../../vendor/wireui/wireui/src/View/**/*.php';
+@source '../../vendor/wireui/wireui/src/Components/**/*.php';
+@source '../../vendor/wireui/wireui/src/views/**/*.blade.php';
+@source '../views/**/*.blade.php';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --color-brand-50: #eff6ff;
+    --color-brand-100: #dbeafe;
+    --color-brand-200: #bfdbfe;
+    --color-brand-300: #93c5fd;
+    --color-brand-400: #60a5fa;
+    --color-brand-500: #3b82f6;
+    --color-brand-600: #2563eb;
+    --color-brand-700: #1d4ed8;
+    --color-brand-800: #1e40af;
+    --color-brand-900: #1e3a8a;
+
+    --color-sidebar: #0f172a;
+    --color-sidebar-text: #cbd5e1;
+
+    --color-positive-50: #ecfdf5;
+    --color-positive-100: #d1fae5;
+    --color-positive-500: #10b981;
+    --color-positive-600: #059669;
+    --color-positive-700: #047857;
+
+    --color-negative-50: #fef2f2;
+    --color-negative-100: #fee2e2;
+    --color-negative-500: #ef4444;
+    --color-negative-600: #dc2626;
+    --color-negative-700: #b91c1c;
+
+    --color-warning-50: #fffbeb;
+    --color-warning-100: #fef3c7;
+    --color-warning-500: #f59e0b;
+    --color-warning-600: #d97706;
+    --color-warning-700: #b45309;
+
+    --color-info-50: #eff6ff;
+    --color-info-100: #dbeafe;
+    --color-info-500: #3b82f6;
+    --color-info-600: #2563eb;
+    --color-info-700: #1d4ed8;
+
+    --color-primary-50: #eef2ff;
+    --color-primary-100: #e0e7ff;
+    --color-primary-500: #6366f1;
+    --color-primary-600: #4f46e5;
+    --color-primary-700: #4338ca;
+
+    --color-login-primary: #6366ee;
+    --color-login-primary-light: #9192f3;
+
+    --color-secondary-50: #f8fafc;
+    --color-secondary-100: #f1f5f9;
+    --color-secondary-500: #64748b;
+    --color-secondary-600: #475569;
+    --color-secondary-700: #334155;
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+@keyframes splash-bar {
+    0% {
+        width: 0%;
+        opacity: 0.6;
+    }
+
+    40% {
+        width: 70%;
+        opacity: 1;
+    }
+
+    100% {
+        width: 100%;
+        opacity: 1;
+    }
+}
+
+.app-splash-bar {
+    animation: splash-bar 2.2s ease-out forwards;
+}
+
+.app-splash {
+    opacity: 1;
+    transition: opacity 0.55s ease;
+}
+
+.app-splash--hide {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.app-splash--hide .app-splash-content {
+    transform: scale(0.96);
+    opacity: 0;
+}
+
+.app-splash-content {
+    transition: transform 0.45s ease, opacity 0.45s ease;
+}
+
+.sidebar-nav {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+    overscroll-behavior: contain;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+    width: 5px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+    background: transparent;
+    margin-block: 0.25rem;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 163, 184, 0.2);
+    border-radius: 9999px;
+}
+
+.sidebar-nav:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 163, 184, 0.45);
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:active {
+    background-color: rgba(148, 163, 184, 0.6);
+}
+
+@supports (scrollbar-gutter: stable) {
+    .sidebar-nav {
+        scrollbar-gutter: stable;
+    }
+}
+
+.fc {
+    --fc-border-color: #e2e8f0;
+    --fc-button-bg-color: #3b82f6;
+    --fc-button-border-color: #2563eb;
+    --fc-button-hover-bg-color: #2563eb;
+    --fc-button-hover-border-color: #1d4ed8;
+    --fc-button-active-bg-color: #1d4ed8;
+    --fc-button-active-border-color: #1e40af;
+    --fc-today-bg-color: #eff6ff;
+    --fc-event-border-color: transparent;
+    font-family: inherit;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.fc .fc-button {
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    box-shadow: none;
+}
+
+.fc .fc-daygrid-event {
+    border-radius: 0.375rem;
+    padding: 0.125rem 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.fc .fc-daygrid-day-number {
+    font-size: 0.875rem;
+    color: #475569;
+    padding: 0.5rem;
+}
+
+.fc .fc-col-header-cell-cushion {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #64748b;
+    padding: 0.75rem 0;
+}
+
+.agenda-calendar .fc {
+    width: 100%;
+}
+
+.agenda-calendar .fc-view-harness {
+    min-height: 32rem;
+}
+
+.tarefas-calendar .fc {
+    width: 100%;
+}
+
+.tarefas-calendar .fc-view-harness {
+    min-height: 32rem;
+}
+
+.kanban-card-ghost {
+    opacity: 0.5;
+}
+
+.kanban-card.sortable-chosen {
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+}
+
+div[x-data='wireui_notifications'] {
+    z-index: 100 !important;
+}
+
+@media (min-width: 640px) {
+    div[x-data='wireui_notifications'] {
+        padding-top: 5.5rem !important;
+        padding-right: 1.25rem !important;
+    }
+}
+
+div[x-data='wireui_notifications'] .text-secondary-500 {
+    color: #334155 !important;
+}
+
+[data-name='form.wrapper.container'] input:not([type='hidden']),
+[data-name='form.wrapper.container'] textarea,
+[data-name='form.wrapper.container'] select {
+    color: #0f172a !important;
+}
+
+[data-name='form.wrapper.container'] input:not([type='hidden'])::placeholder,
+[data-name='form.wrapper.container'] textarea::placeholder {
+    color: #94a3b8 !important;
+}
+
+main table thead th {
+    color: #475569 !important;
+}
+
+main table tbody td {
+    color: #334155;
+}
+
+main table tbody td .font-medium,
+main table tbody td .font-semibold {
+    color: #0f172a;
+}
+
+main table tfoot td {
+    color: #475569 !important;
+}
+
+main .text-slate-500 {
+    color: #64748b;
+}
+
+main .text-slate-600 {
+    color: #475569;
+}
+
+main [data-name='form.wrapper.container'] + p,
+main .text-gray-500 {
+    color: #64748b !important;
+}
+
+main table [x-ref='popover'] {
+    z-index: 50 !important;
+}
+
+.rich-text-editor__btn {
+    display: inline-flex;
+    min-height: 2rem;
+    min-width: 2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    color: #475569;
+    transition: background-color 150ms, color 150ms;
+}
+
+.rich-text-editor__btn:hover {
+    background-color: #e2e8f0;
+    color: #0f172a;
+}
+
+.rich-text-editor__content:empty::before {
+    content: attr(data-placeholder);
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+.rich-text-editor__content ul,
+.rich-text-editor__content ol {
+    margin: 0.5rem 0;
+    padding-left: 1.25rem;
+}
+
+.rich-text-editor__content ul {
+    list-style-type: disc;
+}
+
+.rich-text-editor__content ol {
+    list-style-type: decimal;
+}
+
+.rich-text-editor__content li {
+    margin: 0.25rem 0;
+}
+
+.rich-text-editor__content strong {
+    font-weight: 600;
+}
+
+@keyframes login-float {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-30px);
+    }
+}
+
+.login-illustration {
+    animation: login-float 4.5s ease-in-out infinite;
+}
+
+.login-field:focus-within {
+    box-shadow: 0 0 4px 2px #6366ee;
+}
