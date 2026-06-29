@@ -423,3 +423,37 @@ main table [x-ref='popover'] {
 .login-field:focus-within {
     box-shadow: 0 0 4px 2px #6366ee;
 }
+
+/* WireUI: força tema claro nos campos (evita fundo escuro com prefers-color-scheme: dark) */
+#app-layout-main input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+#app-layout-main select,
+#app-layout-main textarea,
+#app-layout-main [role='combobox'] {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+}
+
+#app-layout-main input::placeholder,
+#app-layout-main textarea::placeholder {
+    color: #94a3b8 !important;
+}
+
+#app-layout-main label {
+    color: #334155;
+}
+
+/* Notificações: texto legível e sem vazar HTML de erro */
+[class*='wireui-notification'],
+[class*='notification'] {
+    max-width: min(24rem, calc(100vw - 2rem));
+    word-break: break-word;
+}
+
+[class*='wireui-notification'] [class*='description'],
+[class*='notification'] [class*='description'] {
+    color: #475569 !important;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    white-space: normal;
+}

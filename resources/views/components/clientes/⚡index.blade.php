@@ -238,44 +238,6 @@ new class extends Component
         $this->showForm = true;
     }
 
-    /** @param  array<string, string>  $dados */
-    public function aplicarDadosCnpjMapeados(array $dados): void
-    {
-        $dados = validator($dados, [
-            'nome' => ['required', 'string', 'max:255'],
-            'documento' => ['nullable', 'string', 'max:20'],
-            'email' => ['nullable', 'string', 'email', 'max:255'],
-            'telefone' => ['nullable', 'string', 'max:20'],
-            'cidade' => ['nullable', 'string', 'max:255'],
-            'estado' => ['nullable', 'string', 'max:2'],
-            'rua' => ['nullable', 'string', 'max:255'],
-            'numero' => ['nullable', 'string', 'max:20'],
-            'bairro' => ['nullable', 'string', 'max:255'],
-        ])->validate();
-
-        $this->nome = $dados['nome'];
-        $this->documento = $dados['documento'];
-        $this->email = $dados['email'];
-        $this->telefone = $dados['telefone'];
-        $this->cidade = $dados['cidade'];
-        $this->estado = $dados['estado'];
-        $this->rua = $dados['rua'];
-        $this->numero = $dados['numero'];
-        $this->bairro = $dados['bairro'];
-
-        $this->notificar('success', 'CNPJ encontrado', 'Dados preenchidos automaticamente.');
-    }
-
-    public function notificarAvisoCnpj(string $title, string $description): void
-    {
-        $this->notificar('warning', $title, $description);
-    }
-
-    public function notificarErroCnpj(string $title, string $description): void
-    {
-        $this->notificar('error', $title, $description);
-    }
-
     public function edit(int $id): void
     {
         $cliente = $this->findCliente($id);
@@ -436,15 +398,35 @@ new class extends Component
                             bairro: String(address.district || ''),
                         };
                     },
+                    notificar(tipo, titulo, descricao) {
+                        window.dispatchEvent(new CustomEvent('wireui:notification', {
+                            detail: {
+                                options: {
+                                    icon: tipo,
+                                    title: titulo,
+                                    description: descricao,
+                                    timeout: 3000,
+                                },
+                            },
+                        }));
+                    },
+                    async aplicarNoFormulario(mapped) {
+                        for (const [campo, valor] of Object.entries(mapped)) {
+                            await $wire.$set(campo, valor, false);
+                        }
+
+                        await $wire.$commit();
+                    },
                     async buscarCnpj(forcar = false) {
                         if (this.buscandoCnpj) {
                             return;
                         }
 
-                        const digits = ($wire.documento || '').replace(/\D/g, '');
+                        const input = this.$el.querySelector('input');
+                        const digits = (input?.value || $wire.documento || '').replace(/\D/g, '');
 
                         if (digits.length !== 14) {
-                            $wire.notificarAvisoCnpj('CNPJ inválido', 'Informe um CNPJ válido com 14 dígitos.');
+                            this.notificar('warning', 'CNPJ inválido', 'Informe um CNPJ válido com 14 dígitos.');
                             return;
                         }
 
@@ -458,12 +440,12 @@ new class extends Component
                             const response = await fetch(`https://open.cnpja.com/office/${digits}`);
 
                             if (response.status === 404) {
-                                $wire.notificarErroCnpj('CNPJ não encontrado', 'CNPJ não encontrado na base da Receita Federal.');
+                                this.notificar('error', 'CNPJ não encontrado', 'CNPJ não encontrado na base da Receita Federal.');
                                 return;
                             }
 
                             if (response.status === 429) {
-                                $wire.notificarErroCnpj('Limite excedido', 'Limite de consultas excedido. Aguarde um minuto e tente novamente.');
+                                this.notificar('warning', 'Limite excedido', 'Limite de consultas excedido. Aguarde um minuto e tente novamente.');
                                 return;
                             }
 
@@ -475,18 +457,26 @@ new class extends Component
                             const mapped = this.mapCnpjResponse(data);
 
                             this.ultimoCnpjConsultado = digits;
-                            await $wire.aplicarDadosCnpjMapeados(mapped);
+                            await this.aplicarNoFormulario(mapped);
+                            this.notificar('success', 'CNPJ encontrado', 'Dados preenchidos automaticamente.');
                         } catch (error) {
-                            $wire.notificarErroCnpj(
+                            this.notificar(
+                                'error',
                                 'Consulta indisponível',
-                                'Não foi possível consultar o CNPJ. Verifique sua conexão e tente novamente.'
+                                'Não foi possível consultar o CNPJ. Verifique sua conexão e tente novamente.',
                             );
                         } finally {
                             this.buscandoCnpj = false;
                         }
                     },
                     init() {
-                        this.$watch(() => $wire.documento, (value) => {
+                        const input = this.$el.querySelector('input');
+
+                        if (! input) {
+                            return;
+                        }
+
+                        input.addEventListener('input', () => {
                             if ($wire.editingId || this.buscandoCnpj) {
                                 return;
                             }
@@ -494,7 +484,7 @@ new class extends Component
                             clearTimeout(this.cnpjTimer);
 
                             this.cnpjTimer = setTimeout(() => {
-                                const digits = (value || '').replace(/\D/g, '');
+                                const digits = (input.value || '').replace(/\D/g, '');
 
                                 if (digits.length === 14 && digits !== this.ultimoCnpjConsultado) {
                                     this.buscarCnpj();
@@ -510,7 +500,7 @@ new class extends Component
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
                             <div class="flex-1">
                                 <x-maskable
-                                    wire:model.live.debounce.500ms="documento"
+                                    wire:model.blur="documento"
                                     x-on:keydown.enter.prevent="buscarCnpj(true)"
                                     label="CNPJ"
                                     mask="##.###.###/####-##"

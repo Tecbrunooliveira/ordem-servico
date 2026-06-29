@@ -7,6 +7,37 @@ import Sortable from 'sortablejs';
 
 window.Sortable = Sortable;
 
+function dispatchWireUiNotification(icon, title, description, timeout = 4000) {
+    window.dispatchEvent(new CustomEvent('wireui:notification', {
+        detail: {
+            options: { icon, title, description, timeout },
+        },
+    }));
+}
+
+document.addEventListener('livewire:init', () => {
+    Livewire.hook('request', ({ fail }) => {
+        fail(({ status, content, preventDefault }) => {
+            const html = typeof content === 'string' ? content : '';
+            const isBrokenResponse = status === 404
+                || status >= 500
+                || html.includes('This Page Does Not Exist')
+                || html.includes('Opening and ending tag mismatch');
+
+            if (! isBrokenResponse) {
+                return;
+            }
+
+            preventDefault();
+            dispatchWireUiNotification(
+                'error',
+                'Erro de comunicação',
+                'Não foi possível completar a ação. Recarregue a página e tente novamente.',
+            );
+        });
+    });
+});
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('agendaCalendar', (initialEvents) => ({
         calendar: null,
