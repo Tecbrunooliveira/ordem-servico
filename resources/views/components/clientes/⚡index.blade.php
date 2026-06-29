@@ -1,6 +1,5 @@
 <?php
 
-use App\Services\CnpjaOpenService;
 use App\Support\ClienteStore;
 use Livewire\Component;
 use WireUi\Enum\Icon;
@@ -239,10 +238,20 @@ new class extends Component
         $this->showForm = true;
     }
 
-    /** @param  array<string, mixed>  $data */
-    public function aplicarDadosCnpj(array $data): void
+    /** @param  array<string, string>  $dados */
+    public function aplicarDadosCnpjMapeados(array $dados): void
     {
-        $dados = app(CnpjaOpenService::class)->mapFromResponse($data);
+        $dados = validator($dados, [
+            'nome' => ['required', 'string', 'max:255'],
+            'documento' => ['nullable', 'string', 'max:20'],
+            'email' => ['nullable', 'string', 'email', 'max:255'],
+            'telefone' => ['nullable', 'string', 'max:20'],
+            'cidade' => ['nullable', 'string', 'max:255'],
+            'estado' => ['nullable', 'string', 'max:2'],
+            'rua' => ['nullable', 'string', 'max:255'],
+            'numero' => ['nullable', 'string', 'max:20'],
+            'bairro' => ['nullable', 'string', 'max:255'],
+        ])->validate();
 
         $this->nome = $dados['nome'];
         $this->documento = $dados['documento'];
@@ -373,7 +382,65 @@ new class extends Component
                 x-data="{
                     buscandoCnpj: false,
                     ultimoCnpjConsultado: '',
+                    cnpjTimer: null,
+                    formatCnpj(digits) {
+                        digits = (digits || '').replace(/\D/g, '');
+
+                        if (digits.length !== 14) {
+                            return digits;
+                        }
+
+                        return digits.replace(
+                            /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+                            '$1.$2.$3/$4-$5',
+                        );
+                    },
+                    formatPhone(phone) {
+                        if (! phone) {
+                            return '';
+                        }
+
+                        const area = String(phone.area || '').replace(/\D/g, '');
+                        const number = String(phone.number || '').replace(/\D/g, '');
+
+                        if (! area || ! number) {
+                            return '';
+                        }
+
+                        if (number.length === 9) {
+                            return `(${area}) ${number.slice(0, 5)}-${number.slice(5)}`;
+                        }
+
+                        if (number.length === 8) {
+                            return `(${area}) ${number.slice(0, 4)}-${number.slice(4)}`;
+                        }
+
+                        return `(${area}) ${number}`;
+                    },
+                    mapCnpjResponse(data) {
+                        const address = data?.address || {};
+                        const company = data?.company || {};
+                        const phones = Array.isArray(data?.phones) ? data.phones : [];
+                        const emails = Array.isArray(data?.emails) ? data.emails : [];
+                        const digits = String(data?.taxId || '').replace(/\D/g, '');
+
+                        return {
+                            nome: String(company.name || data?.alias || ''),
+                            documento: this.formatCnpj(digits),
+                            email: String(emails[0]?.address || ''),
+                            telefone: this.formatPhone(phones[0]),
+                            cidade: String(address.city || ''),
+                            estado: String(address.state || ''),
+                            rua: String(address.street || ''),
+                            numero: String(address.number || ''),
+                            bairro: String(address.district || ''),
+                        };
+                    },
                     async buscarCnpj(forcar = false) {
+                        if (this.buscandoCnpj) {
+                            return;
+                        }
+
                         const digits = ($wire.documento || '').replace(/\D/g, '');
 
                         if (digits.length !== 14) {
@@ -405,8 +472,10 @@ new class extends Component
                             }
 
                             const data = await response.json();
+                            const mapped = this.mapCnpjResponse(data);
+
                             this.ultimoCnpjConsultado = digits;
-                            await $wire.aplicarDadosCnpj(data);
+                            await $wire.aplicarDadosCnpjMapeados(mapped);
                         } catch (error) {
                             $wire.notificarErroCnpj(
                                 'Consulta indisponível',
@@ -418,15 +487,19 @@ new class extends Component
                     },
                     init() {
                         this.$watch(() => $wire.documento, (value) => {
-                            if ($wire.editingId) {
+                            if ($wire.editingId || this.buscandoCnpj) {
                                 return;
                             }
 
-                            const digits = (value || '').replace(/\D/g, '');
+                            clearTimeout(this.cnpjTimer);
 
-                            if (digits.length === 14) {
-                                this.buscarCnpj();
-                            }
+                            this.cnpjTimer = setTimeout(() => {
+                                const digits = (value || '').replace(/\D/g, '');
+
+                                if (digits.length === 14 && digits !== this.ultimoCnpjConsultado) {
+                                    this.buscarCnpj();
+                                }
+                            }, 500);
                         });
                     },
                 }"
@@ -437,7 +510,7 @@ new class extends Component
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
                             <div class="flex-1">
                                 <x-maskable
-                                    wire:model="documento"
+                                    wire:model.live.debounce.500ms="documento"
                                     x-on:keydown.enter.prevent="buscarCnpj(true)"
                                     label="CNPJ"
                                     mask="##.###.###/####-##"
