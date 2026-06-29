@@ -1,11 +1,15 @@
+DirectoryIndex index.php
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Raiz da subpasta → public/
-    RewriteRule ^$ public/ [L]
-
-    # Demais URLs → public/ (se não for arquivo/pasta real na raiz)
+    # Arquivos estáticos dentro de public/
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ public/$1 [L]
+    RewriteRule ^(build|css|js|fonts|storage|vendor|wireui|livewire[^/]*)/(.*)$ public/$1/$2 [L]
+
+    # Demais rotas → index.php na raiz
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
 </IfModule>
