@@ -1,41 +1,18 @@
 <?php
 
+use App\Support\DashboardRepository;
 use Livewire\Component;
 
 new class extends Component
 {
-    public array $stats = [
-        ['value' => '12', 'label' => 'Tarefas Hoje', 'hint' => '3 em atraso', 'hintColor' => 'text-red-500', 'icon' => 'clipboard-document-list', 'iconBg' => 'bg-blue-100', 'iconColor' => 'text-blue-600'],
-        ['value' => '5', 'label' => 'Ordem Serviço', 'hint' => '3 hoje', 'hintColor' => 'text-emerald-600', 'icon' => 'document-text', 'iconBg' => 'bg-emerald-100', 'iconColor' => 'text-emerald-600'],
-        // ['value' => '18', 'label' => 'Projetos Ativos', 'hint' => '4 em risco', 'hintColor' => 'text-orange-500', 'icon' => 'folder', 'iconBg' => 'bg-orange-100', 'iconColor' => 'text-orange-600'],
-    ];
-
-    public array $agenda = [
-        ['time' => '08:00', 'title' => 'Visita Técnica - Cliente ABC', 'description' => 'Manutenção preventiva', 'person' => 'Carlos Mendes', 'location' => 'São Paulo, SP'],
-        ['time' => '10:30', 'title' => 'Treinamento - Segurança', 'description' => 'NR-10 atualização', 'person' => 'Ana Paula', 'location' => 'Sala 3'],
-        ['time' => '14:00', 'title' => 'Reunião de Projeto Alpha', 'description' => 'Alinhamento de entregas', 'person' => 'Equipe Técnica', 'location' => 'Online'],
-        ['time' => '16:30', 'title' => 'Inspeção - Obra Delta', 'description' => 'Verificação de instalações', 'person' => 'Roberto Lima', 'location' => 'Campinas, SP'],
-    ];
-
-    // public array $featuredProjects = [
-    //     ['name' => 'Projeto Alpha', 'progress' => 75, 'status' => 'Em andamento', 'statusColor' => 'blue'],
-    //     ['name' => 'Projeto Beta', 'progress' => 45, 'status' => 'Em andamento', 'statusColor' => 'blue'],
-    //     ['name' => 'Projeto Gama', 'progress' => 90, 'status' => 'Em andamento', 'statusColor' => 'blue'],
-    //     ['name' => 'Projeto Delta', 'progress' => 30, 'status' => 'Em risco', 'statusColor' => 'orange'],
-    // ];
-
-    // public array $trainings = [
-    //     ['day' => '24', 'month' => 'MAI', 'title' => 'NR-35 - Trabalho em Altura', 'time' => '09:00 - 12:00', 'room' => 'Sala 2'],
-    //     ['day' => '28', 'month' => 'MAI', 'title' => 'Primeiros Socorros', 'time' => '14:00 - 17:00', 'room' => 'Auditório'],
-    //     ['day' => '02', 'month' => 'JUN', 'title' => 'Gestão de Projetos', 'time' => '08:30 - 11:30', 'room' => 'Sala 1'],
-    // ];
-
-    public array $notifications = [
-        ['type' => 'warning', 'title' => 'Tarefa em atraso', 'message' => 'A tarefa "Relatório mensal" está 2 dias em atraso.', 'time' => 'há 1h'],
-        ['type' => 'info', 'title' => 'Novo projeto', 'message' => 'O projeto "Epsilon" foi criado e aguarda alocação.', 'time' => 'há 3h'],
-        ['type' => 'success', 'title' => 'Visita concluída', 'message' => 'Visita técnica no Cliente XYZ finalizada com sucesso.', 'time' => 'há 5h'],
-        ['type' => 'warning', 'title' => 'Treinamento próximo', 'message' => 'NR-35 inicia amanhã às 09:00.', 'time' => 'há 1d'],
-    ];
+    public function with(): array
+    {
+        return [
+            'stats' => DashboardRepository::stats(),
+            'agenda' => DashboardRepository::agendaHoje(),
+            'notifications' => DashboardRepository::notificacoes(),
+        ];
+    }
 };
 ?>
 
@@ -63,7 +40,7 @@ new class extends Component
                 <h2 class="font-semibold text-slate-900">Agenda de Hoje</h2>
             </div>
             <div class="divide-y divide-slate-100">
-                @foreach ($agenda as $item)
+                @forelse ($agenda as $item)
                     <div class="flex gap-4 px-5 py-4">
                         <div class="shrink-0 text-center">
                             <span class="text-sm font-bold text-brand-600">{{ $item['time'] }}</span>
@@ -83,28 +60,25 @@ new class extends Component
                             </div>
                         </div>
                     </div>
-                @endforeach
+                @empty
+                    <div class="px-5 py-10 text-center text-sm text-slate-600">
+                        Nenhuma ordem de serviço agendada para hoje.
+                    </div>
+                @endforelse
             </div>
             <div class="border-t border-slate-100 px-5 py-3">
-                <a href="#" class="text-sm font-medium text-brand-600 hover:text-brand-700">Ver todas as atividades →</a>
+                <a href="{{ route('agenda.index') }}" class="text-sm font-medium text-brand-600 hover:text-brand-700">Ver todas as atividades →</a>
             </div>
         </div>
-
-        {{-- Projetos em Destaque --}}
-        {{--
-        <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
-            ...
-        </div>
-        --}}
 
         {{-- Avisos e Notificações --}}
         <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                 <h2 class="font-semibold text-slate-900">Avisos e Notificações</h2>
-                <a href="#" class="text-xs font-medium text-brand-600 hover:text-brand-700">Ver todas →</a>
+                <a href="{{ route('tarefas.index') }}" class="text-xs font-medium text-brand-600 hover:text-brand-700">Ver todas →</a>
             </div>
             <div class="divide-y divide-slate-100">
-                @foreach ($notifications as $notification)
+                @forelse ($notifications as $notification)
                     @php
                         $styles = match ($notification['type']) {
                             'warning' => ['bg' => 'bg-orange-100', 'text' => 'text-orange-600', 'icon' => 'exclamation-triangle'],
@@ -125,24 +99,12 @@ new class extends Component
                             <p class="mt-0.5 text-xs text-slate-500">{{ $notification['message'] }}</p>
                         </div>
                     </div>
-                @endforeach
+                @empty
+                    <div class="px-5 py-10 text-center text-sm text-slate-600">
+                        Nenhum aviso no momento.
+                    </div>
+                @endforelse
             </div>
         </div>
     </div>
-
-    {{-- Linha inferior: Próximos Treinamentos (oculto)
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                <h2 class="font-semibold text-slate-900">Próximos Treinamentos</h2>
-                <a href="#" class="text-xs font-medium text-brand-600 hover:text-brand-700">Ver todos</a>
-            </div>
-            <div class="divide-y divide-slate-100">
-                @foreach ($trainings as $training)
-                    ...
-                @endforeach
-            </div>
-        </div>
-    </div>
-    --}}
 </div>
