@@ -774,33 +774,31 @@ new class extends Component
             </form>
         </div>
     @else
-        {{-- layout-lista-v3: menu fixo + toolbar sem flex vertical --}}
+        {{-- layout-lista-v4: pesquisa + filtros + nova tarefa na mesma linha --}}
         <div
             class="mb-4 space-y-3"
             x-data="{ filtrosAbertos: false }"
         >
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div class="flex w-full flex-col gap-3 lg:min-w-0 lg:flex-1 lg:flex-row lg:items-end">
-                    <div class="w-full lg:min-w-0 lg:flex-1">
-                        <x-input
-                            wire:model.live.debounce.300ms="busca"
-                            icon="magnifying-glass"
-                            label="Pesquisar"
-                            placeholder="Título da tarefa"
-                        />
-                    </div>
-
-                    <button
-                        type="button"
-                        x-on:click="filtrosAbertos = ! filtrosAbertos"
-                        class="inline-flex h-10 shrink-0 items-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 lg:self-auto"
-                    >
-                        <x-icon name="plus" class="h-4 w-4 transition-transform" x-bind:class="filtrosAbertos && 'rotate-45'" />
-                        Filtros
-                    </button>
+            <div class="tarefas-list-toolbar">
+                <div class="min-w-0">
+                    <x-input
+                        wire:model.live.debounce.300ms="busca"
+                        icon="magnifying-glass"
+                        label="Pesquisar"
+                        placeholder="Título da tarefa"
+                    />
                 </div>
 
-                <x-button primary icon="plus" label="Nova Tarefa" wire:click="create" class="shrink-0 self-start lg:self-auto" />
+                <button
+                    type="button"
+                    x-on:click="filtrosAbertos = ! filtrosAbertos"
+                    class="inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                >
+                    <x-icon name="plus" class="h-4 w-4 transition-transform" x-bind:class="filtrosAbertos && 'rotate-45'" />
+                    Filtros
+                </button>
+
+                <x-button primary icon="plus" label="Nova Tarefa" wire:click="create" class="!w-auto shrink-0 whitespace-nowrap" />
             </div>
 
             <div
