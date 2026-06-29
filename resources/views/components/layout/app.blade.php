@@ -54,7 +54,7 @@
         </div>
     </div>
 
-    @livewireScripts
+    {!! \App\Support\LivewireAssets::scripts() !!}
     {!! \App\Support\ViteManifest::scripts(['resources/js/app.js']) !!}
     <script src="{{ asset('vendor/wireui/wireui.js') }}" defer></script>
     <script>

@@ -38,17 +38,6 @@ class AppServiceProvider extends ServiceProvider
             ]);
         }
 
-        if (class_exists(\Livewire\Livewire::class)) {
-            \Livewire\Livewire::useScriptTagAttributes([
-                'data-update-uri' => Subdirectory::applicationUrl(
-                    app('livewire')->getUpdateUri(),
-                ),
-                'data-module-url' => Subdirectory::applicationUrl(
-                    app('livewire')->getUriPrefix(),
-                ),
-            ]);
-        }
-
         \Illuminate\Support\Facades\Vite::createAssetPathsUsing(
             fn (string $path, ?bool $secure) => asset($path)
         );
