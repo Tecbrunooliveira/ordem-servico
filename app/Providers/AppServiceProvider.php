@@ -30,6 +30,14 @@ class AppServiceProvider extends ServiceProvider
 
         Subdirectory::configureUrls();
 
+        if (file_exists(public_path('vendor/livewire/manifest.json'))) {
+            $livewireFile = config('app.debug') ? 'livewire.js' : 'livewire.min.js';
+
+            config([
+                'livewire.asset_url' => asset('vendor/livewire/'.$livewireFile),
+            ]);
+        }
+
         \Illuminate\Support\Facades\Vite::createAssetPathsUsing(
             fn (string $path, ?bool $secure) => asset($path)
         );

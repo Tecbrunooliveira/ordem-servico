@@ -59,10 +59,14 @@
         "wireui:assets": [
             "@php scripts/copy-wireui-assets.php"
         ],
+        "livewire:assets": [
+            "@php artisan livewire:publish --assets --ansi"
+        ],
         "assets:build": [
             "npm run build",
             "@php scripts/fix-build-paths.php",
-            "@wireui:assets"
+            "@wireui:assets",
+            "@livewire:assets"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
