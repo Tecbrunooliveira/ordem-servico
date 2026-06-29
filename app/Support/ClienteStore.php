@@ -25,6 +25,29 @@ class ClienteStore
         return $cliente ? self::fromModel($cliente) : null;
     }
 
+    /** @param  array<string, mixed>  $cliente */
+    public static function upsert(array $cliente): Cliente
+    {
+        $attributes = self::toAttributes($cliente);
+
+        if (! empty($cliente['id'])) {
+            $model = Cliente::query()->find($cliente['id']);
+
+            if ($model) {
+                $model->update($attributes);
+
+                return $model;
+            }
+        }
+
+        return Cliente::query()->create($attributes);
+    }
+
+    public static function delete(int $id): void
+    {
+        Cliente::query()->whereKey($id)->delete();
+    }
+
     /** @param  array<int, array<string, mixed>>  $clientes */
     public static function saveAll(array $clientes): void
     {
@@ -32,16 +55,7 @@ class ClienteStore
             $ids = [];
 
             foreach ($clientes as $cliente) {
-                $attributes = self::toAttributes($cliente);
-
-                if (! empty($cliente['id'])) {
-                    $model = Cliente::query()->find($cliente['id']);
-                    $model?->update($attributes);
-                    $ids[] = (int) $cliente['id'];
-                } else {
-                    $model = Cliente::query()->create($attributes);
-                    $ids[] = $model->id;
-                }
+                $ids[] = self::upsert($cliente)->id;
             }
 
             if ($ids !== []) {
@@ -89,18 +103,20 @@ class ClienteStore
     /** @param  array<string, mixed>  $cliente */
     private static function toAttributes(array $cliente): array
     {
+        $nullable = static fn (mixed $value): mixed => is_string($value) && trim($value) === '' ? null : $value;
+
         return [
             'nome' => $cliente['nome'],
-            'documento' => $cliente['documento'] ?? null,
-            'email' => $cliente['email'] ?? null,
-            'telefone' => $cliente['telefone'] ?? null,
-            'cidade' => $cliente['cidade'] ?? null,
-            'estado' => $cliente['estado'] ?? null,
-            'rua' => $cliente['rua'] ?? null,
-            'numero' => $cliente['numero'] ?? null,
-            'bairro' => $cliente['bairro'] ?? null,
-            'cep' => $cliente['cep'] ?? null,
-            'endereco' => $cliente['endereco'] ?? null,
+            'documento' => $nullable($cliente['documento'] ?? null),
+            'email' => $nullable($cliente['email'] ?? null),
+            'telefone' => $nullable($cliente['telefone'] ?? null),
+            'cidade' => $nullable($cliente['cidade'] ?? null),
+            'estado' => $nullable($cliente['estado'] ?? null),
+            'rua' => $nullable($cliente['rua'] ?? null),
+            'numero' => $nullable($cliente['numero'] ?? null),
+            'bairro' => $nullable($cliente['bairro'] ?? null),
+            'cep' => $nullable($cliente['cep'] ?? null),
+            'endereco' => $nullable($cliente['endereco'] ?? null),
             'ativo' => (bool) ($cliente['ativo'] ?? true),
         ];
     }

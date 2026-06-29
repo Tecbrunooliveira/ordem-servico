@@ -1,8 +1,7 @@
 <?php
 
-use App\Support\ClienteStore;
+use App\Models\Cliente;
 use Livewire\Component;
-use WireUi\Enum\Icon;
 use WireUi\Traits\WireUiActions;
 
 new class extends Component
@@ -12,8 +11,6 @@ new class extends Component
     public bool $showForm = false;
 
     public ?int $editingId = null;
-
-    public int $nextId = 3;
 
     /** @var array<int, array<string, mixed>> */
     public array $clientes = [];
@@ -42,6 +39,10 @@ new class extends Component
 
     public string $filtroAtivo = '';
 
+    public ?string $alerta = null;
+
+    public string $alertaTipo = '';
+
     protected function rules(): array
     {
         return [
@@ -54,47 +55,82 @@ new class extends Component
             'rua' => ['nullable', 'string', 'max:255'],
             'numero' => ['nullable', 'string', 'max:20'],
             'bairro' => ['nullable', 'string', 'max:100'],
-            'ativo' => ['boolean'],
         ];
     }
 
     public function mount(): void
     {
-        $this->clientes = ClienteStore::all();
-        $this->nextId = (int) collect($this->clientes)->max('id') + 1;
+        $this->carregarClientes();
     }
 
-    private function persistirClientes(): void
+    private function carregarClientes(): void
     {
-        ClienteStore::saveAll($this->clientes);
+        try {
+            $this->clientes = Cliente::query()
+                ->orderBy('nome')
+                ->get()
+                ->map(fn (Cliente $cliente) => $this->clienteParaArray($cliente))
+                ->all();
+        } catch (\Throwable $exception) {
+            report($exception);
+            $this->clientes = [];
+            $this->alerta('erro', 'Não foi possível carregar os clientes. Execute as migrations no servidor.');
+        }
     }
 
-    private function makeCliente(
-        int $id,
-        string $nome,
-        string $documento,
-        string $email,
-        string $telefone,
-        string $cidade,
-        string $estado,
-        string $rua,
-        string $numero = '',
-        string $bairro = '',
-        bool $ativo = true,
-    ): array {
+    /** @return array<string, mixed> */
+    private function clienteParaArray(Cliente $cliente): array
+    {
         return [
-            'id' => $id,
-            'nome' => $nome,
-            'documento' => $documento,
-            'email' => $email,
-            'telefone' => $telefone,
-            'cidade' => $cidade,
-            'estado' => $estado,
-            'rua' => $rua,
-            'numero' => $numero,
-            'bairro' => $bairro,
-            'ativo' => $ativo,
+            'id' => $cliente->id,
+            'nome' => $cliente->nome,
+            'documento' => $cliente->documento ?? '',
+            'email' => $cliente->email ?? '',
+            'telefone' => $cliente->telefone ?? '',
+            'cidade' => $cliente->cidade ?? '',
+            'estado' => $cliente->estado ?? '',
+            'rua' => $cliente->rua ?? '',
+            'numero' => $cliente->numero ?? '',
+            'bairro' => $cliente->bairro ?? '',
+            'ativo' => (bool) $cliente->ativo,
         ];
+    }
+
+    /** @return array<string, mixed> */
+    private function atributosDoFormulario(array $data): array
+    {
+        $nullable = static fn (mixed $value): ?string => is_string($value) && trim($value) === '' ? null : (is_string($value) ? $value : null);
+
+        return [
+            'nome' => $data['nome'],
+            'documento' => $nullable($data['documento'] ?? null),
+            'email' => $nullable($data['email'] ?? null),
+            'telefone' => $nullable($data['telefone'] ?? null),
+            'cidade' => $nullable($data['cidade'] ?? null),
+            'estado' => $nullable($data['estado'] ?? null),
+            'rua' => $nullable($data['rua'] ?? null),
+            'numero' => $nullable($data['numero'] ?? null),
+            'bairro' => $nullable($data['bairro'] ?? null),
+            'ativo' => $this->ativo,
+        ];
+    }
+
+    private function alerta(string $tipo, string $mensagem): void
+    {
+        $this->alertaTipo = $tipo;
+        $this->alerta = $mensagem;
+
+        $this->notification()->send([
+            'title' => $tipo === 'erro' ? 'Erro' : 'Sucesso',
+            'description' => $mensagem,
+            'timeout' => 5000,
+        ]);
+    }
+
+    private function limparAlerta(): void
+    {
+        $this->alerta = null;
+        $this->alertaTipo = '';
     }
 
     /** @return array<string, mixed> */
@@ -103,17 +139,6 @@ new class extends Component
         foreach ($this->clientes as $cliente) {
             if ($cliente['id'] === $id) {
                 return $cliente;
-            }
-        }
-
-        abort(404);
-    }
-
-    private function findClienteIndex(int $id): int
-    {
-        foreach ($this->clientes as $index => $cliente) {
-            if ($cliente['id'] === $id) {
-                return $index;
             }
         }
 
@@ -215,25 +240,9 @@ new class extends Component
         ];
     }
 
-    private function notificar(string $tipo, string $title, ?string $description = null): void
-    {
-        $icon = match ($tipo) {
-            'success' => Icon::SUCCESS,
-            'warning' => Icon::WARNING,
-            'error' => Icon::ERROR,
-            default => Icon::INFO,
-        };
-
-        $this->notification()->send([
-            'icon' => $icon,
-            'title' => $title,
-            'description' => $description,
-            'timeout' => 3000,
-        ]);
-    }
-
     public function create(): void
     {
+        $this->limparAlerta();
         $this->resetForm();
         $this->showForm = true;
     }
@@ -284,24 +293,39 @@ new class extends Component
 
     public function save(): void
     {
-        $data = $this->validate();
+        $this->limparAlerta();
+        $this->estado = strtoupper(substr(trim($this->estado), 0, 2));
 
-        if ($this->editingId) {
-            $index = $this->findClienteIndex($this->editingId);
-            $this->clientes[$index] = [
-                ...$this->clientes[$index],
-                ...$data,
-            ];
-            $this->notificar('success', 'Cliente atualizado', 'Os dados foram salvos com sucesso.');
-        } else {
-            $this->clientes[] = [
-                'id' => $this->nextId++,
-                ...$data,
-            ];
-            $this->notificar('success', 'Cliente cadastrado', 'O cliente foi adicionado com sucesso.');
+        $data = $this->validate();
+        $atributos = $this->atributosDoFormulario($data);
+        $wasEditing = (bool) $this->editingId;
+
+        try {
+            if ($wasEditing) {
+                $cliente = Cliente::query()->findOrFail($this->editingId);
+                $cliente->update($atributos);
+            } else {
+                Cliente::query()->create($atributos);
+            }
+
+            $this->carregarClientes();
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            $mensagem = config('app.debug')
+                ? $exception->getMessage()
+                : 'Não foi possível gravar no banco. Execute: php83 artisan migrate --force';
+
+            $this->alerta('erro', $mensagem);
+
+            return;
         }
 
-        $this->persistirClientes();
+        $this->alerta(
+            'sucesso',
+            $wasEditing ? 'Cliente atualizado com sucesso.' : 'Cliente cadastrado com sucesso.',
+        );
+
         $this->resetForm();
         $this->showForm = false;
     }
@@ -314,13 +338,16 @@ new class extends Component
 
     public function delete(int $id): void
     {
-        $this->clientes = array_values(array_filter(
-            $this->clientes,
-            fn (array $cliente) => $cliente['id'] !== $id,
-        ));
+        $this->limparAlerta();
 
-        $this->persistirClientes();
-        $this->notificar('success', 'Cliente removido', 'O cadastro foi excluído.');
+        try {
+            Cliente::query()->whereKey($id)->delete();
+            $this->carregarClientes();
+            $this->alerta('sucesso', 'Cliente removido com sucesso.');
+        } catch (\Throwable $exception) {
+            report($exception);
+            $this->alerta('erro', 'Não foi possível excluir o cliente.');
+        }
     }
 
     private function resetForm(): void
@@ -356,6 +383,19 @@ new class extends Component
 ?>
 
 <div>
+    @if ($alerta)
+        <div
+            wire:key="cliente-alerta"
+            @class([
+                'mb-4 rounded-lg border px-4 py-3 text-sm font-medium',
+                'border-emerald-200 bg-emerald-50 text-emerald-800' => $alertaTipo === 'sucesso',
+                'border-red-200 bg-red-50 text-red-800' => $alertaTipo === 'erro',
+            ])
+        >
+            {{ $alerta }}
+        </div>
+    @endif
+
     @if ($showForm)
         <div class="mx-auto max-w-3xl">
             <div class="mb-6">
@@ -424,16 +464,23 @@ new class extends Component
                             bairro: String(address.district || ''),
                         };
                     },
-                    notificar(tipo, titulo, descricao) {
-                        window.dispatchEvent(new CustomEvent('wireui:notification', {
-                            detail: {
-                                options: {
-                                    icon: tipo,
-                                    title: titulo,
-                                    description: descricao,
-                                    timeout: 3000,
-                                },
+                    notificar(titulo, descricao) {
+                        const payload = {
+                            options: {
+                                title: titulo,
+                                description: descricao,
+                                timeout: 3000,
                             },
+                        };
+
+                        if (window.Livewire?.dispatch) {
+                            window.Livewire.dispatch('wireui:notification', payload);
+                            return;
+                        }
+
+                        window.dispatchEvent(new CustomEvent('wireui:notification', {
+                            bubbles: true,
+                            detail: payload,
                         }));
                     },
                     async aplicarNoFormulario(mapped) {
@@ -448,7 +495,7 @@ new class extends Component
                         const digits = (input?.value || $wire.documento || '').replace(/\D/g, '');
 
                         if (digits.length !== 14) {
-                            this.notificar('warning', 'CNPJ inválido', 'Informe um CNPJ válido com 14 dígitos.');
+                            this.notificar('CNPJ inválido', 'Informe um CNPJ válido com 14 dígitos.');
                             return;
                         }
 
@@ -462,12 +509,12 @@ new class extends Component
                             const response = await fetch(`https://open.cnpja.com/office/${digits}`);
 
                             if (response.status === 404) {
-                                this.notificar('error', 'CNPJ não encontrado', 'CNPJ não encontrado na base da Receita Federal.');
+                                this.notificar('CNPJ não encontrado', 'CNPJ não encontrado na base da Receita Federal.');
                                 return;
                             }
 
                             if (response.status === 429) {
-                                this.notificar('warning', 'Limite excedido', 'Limite de consultas excedido. Aguarde um minuto e tente novamente.');
+                                this.notificar('Limite excedido', 'Limite de consultas excedido. Aguarde um minuto e tente novamente.');
                                 return;
                             }
 
@@ -482,13 +529,12 @@ new class extends Component
 
                             try {
                                 await this.aplicarNoFormulario(mapped);
-                                this.notificar('success', 'CNPJ encontrado', 'Dados preenchidos automaticamente.');
+                                this.notificar('CNPJ encontrado', 'Dados preenchidos automaticamente.');
                             } catch (applyError) {
-                                this.notificar('error', 'Erro ao preencher', 'Não foi possível aplicar os dados do CNPJ.');
+                                this.notificar('Erro ao preencher', 'Não foi possível aplicar os dados do CNPJ.');
                             }
                         } catch (error) {
                             this.notificar(
-                                'error',
                                 'Consulta indisponível',
                                 'Não foi possível consultar o CNPJ. Verifique sua conexão e tente novamente.',
                             );

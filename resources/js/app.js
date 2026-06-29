@@ -7,16 +7,60 @@ import Sortable from 'sortablejs';
 
 window.Sortable = Sortable;
 
+const appBaseUrl = document.querySelector('meta[name="app-url"]')?.content?.replace(/\/$/, '') ?? '';
+const wireuiIconBase = document.querySelector('meta[name="wireui-icons-base"]')?.content
+    ?? `${appBaseUrl}/wireui/icons/outline/`;
+
+function rewriteWireuiUrl(url) {
+    if (! appBaseUrl || typeof url !== 'string') {
+        return url;
+    }
+
+    if (url.startsWith('/wireui/')) {
+        return `${appBaseUrl}${url}`;
+    }
+
+    try {
+        const parsed = new URL(url, window.location.origin);
+
+        if (parsed.pathname.startsWith('/wireui/') && ! parsed.pathname.startsWith(`${new URL(appBaseUrl).pathname}/wireui/`)) {
+            return `${appBaseUrl}${parsed.pathname}${parsed.search}${parsed.hash}`;
+        }
+    } catch {
+        return url;
+    }
+
+    return url;
+}
+
+if (appBaseUrl) {
+    const nativeFetch = window.fetch.bind(window);
+
+    window.fetch = (input, init) => {
+        if (typeof input === 'string') {
+            return nativeFetch(rewriteWireuiUrl(input), init);
+        }
+
+        if (input instanceof Request) {
+            const nextUrl = rewriteWireuiUrl(input.url);
+
+            if (nextUrl !== input.url) {
+                input = new Request(nextUrl, input);
+            }
+        }
+
+        return nativeFetch(input, init);
+    };
+}
+
 document.addEventListener('livewire:init', () => {
     Livewire.hook('request', ({ fail }) => {
         fail(({ status, content, preventDefault }) => {
             const html = typeof content === 'string' ? content : '';
-            const isBrokenResponse = status === 404
-                || status >= 500
-                || html.includes('This Page Does Not Exist')
-                || html.includes('Opening and ending tag mismatch');
+            const isHostinger404 = status === 404
+                && (html.includes('This Page Does Not Exist') || html.includes('GoogleAnalyticsObject'));
 
-            if (isBrokenResponse) {
+            if (isHostinger404) {
                 preventDefault();
             }
         });

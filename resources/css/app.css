@@ -357,8 +357,18 @@ main .text-gray-500 {
     color: #64748b !important;
 }
 
+.page-list-table-scroll {
+    overflow-x: auto;
+}
+
+@media (min-width: 48rem) {
+    .page-list-table-scroll {
+        overflow-x: visible;
+    }
+}
+
 main table [x-ref='popover'] {
-    z-index: 50 !important;
+    z-index: 60 !important;
 }
 
 .rich-text-editor__btn {
@@ -487,4 +497,21 @@ main table [x-ref='popover'] {
         background-color: transparent !important;
         color: #0f172a !important;
     }
+}
+
+/* Notificações WireUI: tema claro e ícones sem HTML de erro */
+[x-data='wireui_notifications'] [id^='notification.'] {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 10px 15px -3px rgb(15 23 42 / 0.08) !important;
+}
+
+[x-data='wireui_notifications'] [id^='notification.'] p {
+    color: inherit !important;
+}
+
+[x-data='wireui_notifications'] [id^='notification.'] .text-secondary-500,
+[x-data='wireui_notifications'] [id^='notification.'] .text-secondary-900 {
+    color: #334155 !important;
 }

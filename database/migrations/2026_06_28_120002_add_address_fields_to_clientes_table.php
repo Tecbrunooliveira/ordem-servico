@@ -8,11 +8,26 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasTable('clientes')) {
+            return;
+        }
+
         Schema::table('clientes', function (Blueprint $table) {
-            $table->string('rua')->nullable()->after('estado');
-            $table->string('numero', 20)->nullable()->after('rua');
-            $table->string('bairro')->nullable()->after('numero');
-            $table->string('cep', 10)->nullable()->after('bairro');
+            if (! Schema::hasColumn('clientes', 'rua')) {
+                $table->string('rua')->nullable()->after('estado');
+            }
+
+            if (! Schema::hasColumn('clientes', 'numero')) {
+                $table->string('numero', 20)->nullable()->after('rua');
+            }
+
+            if (! Schema::hasColumn('clientes', 'bairro')) {
+                $table->string('bairro')->nullable()->after('numero');
+            }
+
+            if (! Schema::hasColumn('clientes', 'cep')) {
+                $table->string('cep', 10)->nullable()->after('bairro');
+            }
         });
     }
 

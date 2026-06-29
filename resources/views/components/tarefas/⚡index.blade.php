@@ -775,12 +775,12 @@ new class extends Component
         </div>
     @else
         <div
-            class="mb-4 space-y-3"
+            class="mb-4 space-y-4"
             x-data="{ filtrosAbertos: false }"
         >
-            <div class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-                <div class="flex flex-1 flex-col gap-3 lg:flex-row lg:items-end">
-                    <div class="flex-1">
+            <div class="page-list-toolbar">
+                <div class="page-list-toolbar-filters">
+                    <div class="min-w-0 flex-1">
                         <x-input
                             wire:model.live.debounce.300ms="busca"
                             icon="magnifying-glass"
@@ -792,14 +792,14 @@ new class extends Component
                     <button
                         type="button"
                         x-on:click="filtrosAbertos = ! filtrosAbertos"
-                        class="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                        class="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
                     >
                         <x-icon name="plus" class="h-4 w-4 transition-transform" x-bind:class="filtrosAbertos && 'rotate-45'" />
                         Filtros
                     </button>
                 </div>
 
-                <x-button primary icon="plus" label="Nova Tarefa" wire:click="create" />
+                <x-button primary icon="plus" label="Nova Tarefa" wire:click="create" class="shrink-0" />
             </div>
 
             <div
@@ -849,9 +849,9 @@ new class extends Component
         </div>
         --}}
 
-        <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
+        <div class="page-list-table rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div class="page-list-table-scroll overflow-x-auto md:overflow-x-visible">
+                <table class="w-full text-left text-sm">
                         <thead class="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
                             <tr>
                                 <th class="px-5 py-3">Título</th>
@@ -903,7 +903,7 @@ new class extends Component
                                             </button>
 
                                             <x-dropdown
-                                                position="bottom-end"
+                                                position="top-end"
                                                 width="sm"
                                                 wire:key="ajuste-rapido-{{ $tarefa['id'] }}"
                                             >

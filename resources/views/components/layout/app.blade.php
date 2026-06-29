@@ -9,7 +9,57 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="app-url" content="{{ rtrim(config('app.url'), '/') }}">
+    <meta name="app-url" content="{{ \App\Support\Subdirectory::applicationUrl() }}">
+    <meta name="wireui-icons-base" content="{{ \App\Support\Subdirectory::applicationUrl('/wireui/icons/outline/') }}">
+    <script>
+        (function () {
+            var base = document.querySelector('meta[name="app-url"]')?.content?.replace(/\/$/, '') || '';
+
+            if (! base) {
+                return;
+            }
+
+            function rewriteWireuiUrl(url) {
+                if (typeof url !== 'string') {
+                    return url;
+                }
+
+                if (url.indexOf('/wireui/') === 0) {
+                    return base + url;
+                }
+
+                try {
+                    var parsed = new URL(url, window.location.origin);
+
+                    if (parsed.pathname.indexOf('/wireui/') === 0 && parsed.pathname.indexOf(base + '/wireui/') !== 0) {
+                        return base + parsed.pathname + parsed.search + parsed.hash;
+                    }
+                } catch (error) {
+                    return url;
+                }
+
+                return url;
+            }
+
+            var nativeFetch = window.fetch.bind(window);
+
+            window.fetch = function (input, init) {
+                if (typeof input === 'string') {
+                    return nativeFetch(rewriteWireuiUrl(input), init);
+                }
+
+                if (input instanceof Request) {
+                    var nextUrl = rewriteWireuiUrl(input.url);
+
+                    if (nextUrl !== input.url) {
+                        input = new Request(nextUrl, input);
+                    }
+                }
+
+                return nativeFetch(input, init);
+            };
+        })();
+    </script>
 
     <title>{{ $title }} — {{ config('navigation.brand.name') }}</title>
 
@@ -55,18 +105,11 @@
     </div>
 
     {!! \App\Support\LivewireAssets::scripts() !!}
+    <script src="{{ asset('vendor/wireui/wireui.js') }}"></script>
+    <x-layout.wireui-subdirectory />
     {!! \App\Support\ViteManifest::scripts(['resources/js/app.js']) !!}
-    <script src="{{ asset('vendor/wireui/wireui.js') }}" defer></script>
     <script>
-        window.Wireui = {
-            cache: {},
-            hook(hook, callback) {
-                window.addEventListener(`wireui:${hook}`, () => callback())
-            },
-            dispatchHook(hook) {
-                window.dispatchEvent(new Event(`wireui:${hook}`))
-            }
-        }
+        window.__patchWireuiNotifications?.();
     </script>
     @stack('scripts')
 </body>
