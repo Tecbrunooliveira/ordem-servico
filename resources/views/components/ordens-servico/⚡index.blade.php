@@ -58,6 +58,8 @@ new class extends Component
 
     public string $buscaClienteForm = '';
 
+    public string $buscaClienteFiltro = '';
+
     public bool $showVisualizar = false;
 
     /** @var array<string, mixed>|null */
@@ -449,9 +451,9 @@ new class extends Component
     }
 
     /** @return array<int, array<string, mixed>> */
-    public function clientesFormulario(): array
+    private function filtrarClientesPorBusca(string $busca): array
     {
-        $busca = mb_strtolower(trim($this->buscaClienteForm));
+        $busca = mb_strtolower(trim($busca));
 
         if ($busca === '') {
             return [];
@@ -475,6 +477,34 @@ new class extends Component
             })
             ->values()
             ->all();
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function clientesFormulario(): array
+    {
+        return $this->filtrarClientesPorBusca($this->buscaClienteForm);
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function clientesFiltroBusca(): array
+    {
+        return $this->filtrarClientesPorBusca($this->buscaClienteFiltro);
+    }
+
+    public function selecionarClienteFiltro(int $id): void
+    {
+        if (! collect($this->clientesAtivos())->contains(fn (array $cliente) => $cliente['id'] === $id)) {
+            return;
+        }
+
+        $this->filtroCliente = (string) $id;
+        $this->buscaClienteFiltro = '';
+    }
+
+    public function limparClienteFiltro(): void
+    {
+        $this->filtroCliente = '';
+        $this->buscaClienteFiltro = '';
     }
 
     public function selecionarCliente(int $id): void
@@ -957,7 +987,7 @@ new class extends Component
 
     public function limparFiltros(): void
     {
-        $this->reset(['busca', 'filtroStatus', 'filtroTipo', 'filtroCliente', 'filtroAgendamento']);
+        $this->reset(['busca', 'filtroStatus', 'filtroTipo', 'filtroCliente', 'filtroAgendamento', 'buscaClienteFiltro']);
     }
 
     public function temFiltrosAtivos(): bool
@@ -1077,6 +1107,7 @@ new class extends Component
             'totalOrdens' => count($this->ordens),
             'clientes' => $this->clientesAtivos(),
             'clientesFormulario' => $this->clientesFormulario(),
+            'clientesFiltroBusca' => $this->clientesFiltroBusca(),
             'tipos' => OrdemServicoTipo::options(),
             'statuses' => OrdemServicoStatus::options(),
         ];
@@ -1319,12 +1350,56 @@ new class extends Component
                         @endforeach
                     </x-native-select>
 
-                    <x-native-select wire:model.live="filtroCliente" label="Cliente">
-                        <option value="">Todos</option>
-                        @foreach ($clientes as $cliente)
-                            <option value="{{ $cliente['id'] }}">{{ $cliente['nome'] }}</option>
-                        @endforeach
-                    </x-native-select>
+                    <div>
+                        <label class="mb-1 block text-sm font-medium text-gray-700">Cliente</label>
+
+                        @if ($filtroCliente !== '')
+                            @php
+                                $clienteFiltroSelecionado = collect($clientes)->firstWhere('id', (int) $filtroCliente);
+                            @endphp
+                            <div class="flex items-start justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50/50 px-3 py-2.5">
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-medium text-slate-900">{{ $clienteFiltroSelecionado['nome'] ?? '—' }}</p>
+                                    <p class="truncate text-xs text-slate-600">{{ $clienteFiltroSelecionado['documento'] ?? 'Sem CNPJ' }}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    wire:click="limparClienteFiltro"
+                                    class="shrink-0 text-sm font-medium text-brand-600 hover:text-brand-700"
+                                >
+                                    Limpar
+                                </button>
+                            </div>
+                        @else
+                            <x-input
+                                wire:model.live.debounce.300ms="buscaClienteFiltro"
+                                icon="magnifying-glass"
+                                placeholder="Nome ou CNPJ"
+                            />
+
+                            @if ($buscaClienteFiltro !== '')
+                                <div class="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
+                                    @forelse ($clientesFiltroBusca as $cliente)
+                                        <button
+                                            type="button"
+                                            wire:key="cliente-filtro-{{ $cliente['id'] }}"
+                                            wire:click="selecionarClienteFiltro({{ $cliente['id'] }})"
+                                            class="flex w-full items-start gap-2 rounded-lg border border-transparent bg-white px-2.5 py-2 text-left transition hover:border-brand-200 hover:bg-brand-50/50"
+                                        >
+                                            <span class="min-w-0">
+                                                <span class="block truncate text-sm font-medium text-slate-900">{{ $cliente['nome'] }}</span>
+                                                <span class="mt-0.5 block truncate text-xs text-slate-500">{{ $cliente['documento'] ?: 'Sem CNPJ' }}</span>
+                                            </span>
+                                        </button>
+                                    @empty
+                                        <p class="px-2 py-4 text-center text-sm text-slate-600">Nenhum cliente encontrado.</p>
+                                    @endforelse
+                                </div>
+                            @else
+                                <p class="mt-1 text-xs text-slate-500">Digite para buscar por nome ou CNPJ.</p>
+                            @endif
+                        @endif
+                    </div>
 
                     <x-input wire:model.live="filtroAgendamento" label="Agendamento" type="date" />
                 </div>
