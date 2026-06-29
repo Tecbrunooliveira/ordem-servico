@@ -29,6 +29,12 @@ class AppServiceProvider extends ServiceProvider
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
 
+        $appUrl = rtrim((string) config('app.url'), '/');
+
+        if ($appUrl !== '') {
+            \Illuminate\Support\Facades\URL::forceRootUrl($appUrl);
+        }
+
         \Illuminate\Support\Facades\Vite::createAssetPathsUsing(
             fn (string $path, ?bool $secure) => asset($path)
         );

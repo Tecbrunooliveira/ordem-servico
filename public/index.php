@@ -38,6 +38,10 @@ if ($subdirectory !== '' && isset($_SERVER['REQUEST_URI'])) {
 
     $query = isset($parts['query']) ? '?'.$parts['query'] : '';
     $_SERVER['REQUEST_URI'] = $path.$query;
+
+    // Evita que o Laravel duplique /osv2 nas URLs geradas (login, logout, Livewire).
+    $_SERVER['SCRIPT_NAME'] = '/index.php';
+    $_SERVER['PHP_SELF'] = '/index.php';
 }
 
 // Bootstrap Laravel and handle the request...
