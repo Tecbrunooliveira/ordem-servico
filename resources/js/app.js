@@ -68,6 +68,51 @@ document.addEventListener('livewire:init', () => {
 });
 
 document.addEventListener('alpine:init', () => {
+    Alpine.data('tableRowMenu', () => ({
+        open: false,
+        menuStyle: '',
+
+        toggle() {
+            this.open = ! this.open;
+
+            if (this.open) {
+                this.$nextTick(() => this.positionMenu());
+            }
+        },
+
+        close() {
+            this.open = false;
+        },
+
+        positionMenu() {
+            const trigger = this.$refs.trigger;
+            const menu = this.$refs.menu;
+
+            if (! trigger || ! menu) {
+                return;
+            }
+
+            const rect = trigger.getBoundingClientRect();
+            const menuHeight = menu.offsetHeight || 260;
+            const menuWidth = menu.offsetWidth || 224;
+            const gap = 6;
+            const padding = 8;
+
+            let top = rect.bottom + gap;
+
+            if (top + menuHeight > window.innerHeight - padding) {
+                top = rect.top - menuHeight - gap;
+            }
+
+            top = Math.max(padding, Math.min(top, window.innerHeight - menuHeight - padding));
+
+            let left = rect.right - menuWidth;
+            left = Math.max(padding, Math.min(left, window.innerWidth - menuWidth - padding));
+
+            this.menuStyle = `position:fixed;top:${top}px;left:${left}px;z-index:70;`;
+        },
+    }));
+
     Alpine.data('agendaCalendar', (initialEvents) => ({
         calendar: null,
         events: initialEvents,
