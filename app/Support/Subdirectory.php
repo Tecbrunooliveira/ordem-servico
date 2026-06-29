@@ -82,13 +82,25 @@ class Subdirectory
     public static function applicationUrl(string $path = ''): string
     {
         $base = rtrim((string) config('app.url'), '/');
-        $path = '/'.ltrim($path, '/');
+        $path = self::normalizeAppPath($path);
 
         if ($path === '/') {
             return $base;
         }
 
         return $base.$path;
+    }
+
+    public static function normalizeAppPath(string $path): string
+    {
+        $path = '/'.ltrim($path, '/');
+        $basePath = self::path();
+
+        if ($basePath !== '' && (str_starts_with($path, $basePath.'/') || $path === $basePath)) {
+            $path = substr($path, strlen($basePath)) ?: '/';
+        }
+
+        return $path;
     }
 
     public static function normalizeRedirectUrl(?string $url, ?string $fallback = null): string
