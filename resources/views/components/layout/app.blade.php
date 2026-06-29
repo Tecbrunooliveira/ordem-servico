@@ -28,7 +28,6 @@
     <div
         class="flex h-full min-h-screen"
         x-data="{ sidebarOpen: false }"
-        x-cloak
     >
         <div
             x-show="sidebarOpen"
