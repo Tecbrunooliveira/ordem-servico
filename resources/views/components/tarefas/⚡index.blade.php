@@ -774,13 +774,14 @@ new class extends Component
             </form>
         </div>
     @else
+        {{-- layout-lista-v3: menu fixo + toolbar sem flex vertical --}}
         <div
-            class="mb-4 space-y-4"
+            class="mb-4 space-y-3"
             x-data="{ filtrosAbertos: false }"
         >
-            <div class="page-list-toolbar">
-                <div class="page-list-toolbar-filters">
-                    <div class="min-w-0 flex-1">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <div class="flex w-full flex-col gap-3 lg:min-w-0 lg:flex-1 lg:flex-row lg:items-end">
+                    <div class="w-full lg:min-w-0 lg:flex-1">
                         <x-input
                             wire:model.live.debounce.300ms="busca"
                             icon="magnifying-glass"
@@ -792,14 +793,14 @@ new class extends Component
                     <button
                         type="button"
                         x-on:click="filtrosAbertos = ! filtrosAbertos"
-                        class="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                        class="inline-flex h-10 shrink-0 items-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 lg:self-auto"
                     >
                         <x-icon name="plus" class="h-4 w-4 transition-transform" x-bind:class="filtrosAbertos && 'rotate-45'" />
                         Filtros
                     </button>
                 </div>
 
-                <x-button primary icon="plus" label="Nova Tarefa" wire:click="create" class="shrink-0" />
+                <x-button primary icon="plus" label="Nova Tarefa" wire:click="create" class="shrink-0 self-start lg:self-auto" />
             </div>
 
             <div
@@ -849,8 +850,7 @@ new class extends Component
         </div>
         --}}
 
-        <div class="page-list-table rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div class="page-list-table-scroll">
+        <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
                 <table class="w-full text-left text-sm">
                         <thead class="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
                             <tr>
@@ -907,7 +907,7 @@ new class extends Component
                                                     type="button"
                                                     x-on:click="close()"
                                                     wire:click.stop="openAjusteRapido({{ $tarefa['id'] }}, 'vencimento')"
-                                                    class="table-action-menu__item"
+                                                    class="flex w-full items-center rounded-md px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
                                                 >
                                                     <x-icon name="calendar" class="mr-2 h-5 w-5 shrink-0" />
                                                     Vencimento
@@ -917,7 +917,7 @@ new class extends Component
                                                     type="button"
                                                     x-on:click="close()"
                                                     wire:click.stop="openAjusteRapido({{ $tarefa['id'] }}, 'status')"
-                                                    class="table-action-menu__item"
+                                                    class="flex w-full items-center rounded-md px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
                                                 >
                                                     <x-icon name="flag" class="mr-2 h-5 w-5 shrink-0" />
                                                     Status
@@ -927,7 +927,7 @@ new class extends Component
                                                     type="button"
                                                     x-on:click="close()"
                                                     wire:click.stop="openAjusteRapido({{ $tarefa['id'] }}, 'prioridade')"
-                                                    class="table-action-menu__item"
+                                                    class="flex w-full items-center rounded-md px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
                                                 >
                                                     <x-icon name="signal" class="mr-2 h-5 w-5 shrink-0" />
                                                     Prioridade
@@ -937,7 +937,7 @@ new class extends Component
                                                     type="button"
                                                     x-on:click="close()"
                                                     wire:click.stop="openAjusteRapido({{ $tarefa['id'] }}, 'responsavel')"
-                                                    class="table-action-menu__item"
+                                                    class="flex w-full items-center rounded-md px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
                                                 >
                                                     <x-icon name="user" class="mr-2 h-5 w-5 shrink-0" />
                                                     Responsável
@@ -947,7 +947,7 @@ new class extends Component
                                                     type="button"
                                                     x-on:click="close()"
                                                     wire:click.stop="openComentarioModal({{ $tarefa['id'] }})"
-                                                    class="table-action-menu__item"
+                                                    class="flex w-full items-center rounded-md px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
                                                 >
                                                     <x-icon name="chat-bubble-left-right" class="mr-2 h-5 w-5 shrink-0" />
                                                     Comentário
@@ -980,7 +980,6 @@ new class extends Component
                             </tr>
                         </tfoot>
                     </table>
-            </div>
         </div>
 
         {{-- Kanban (oculto)
