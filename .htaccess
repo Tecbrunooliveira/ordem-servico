@@ -2,6 +2,7 @@ DirectoryIndex index.php
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteBase /osv2/
 
     # Arquivos estáticos dentro de public/
     RewriteCond %{REQUEST_FILENAME} !-f

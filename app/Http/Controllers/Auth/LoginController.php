@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Support\Subdirectory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,8 +32,10 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
+        $intended = $request->session()->pull('url.intended');
+
         return redirect()
-            ->intended(route('dashboard'))
+            ->to(Subdirectory::normalizeRedirectUrl($intended, route('dashboard')))
             ->with('show_splash', true);
     }
 
@@ -43,6 +46,6 @@ class LoginController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->to(Subdirectory::applicationUrl('/login'));
     }
 }

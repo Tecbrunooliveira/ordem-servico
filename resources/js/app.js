@@ -68,12 +68,16 @@ document.addEventListener('alpine:init', () => {
                     }
                 },
                 dateClick: (info) => {
-                    const url = new URL(window.location.origin + '/ordens-servico');
+                    const appBase = document.querySelector('meta[name="app-url"]')?.content
+                        ?? window.location.origin;
+                    const url = new URL(`${appBase.replace(/\/$/, '')}/ordens-servico`);
                     url.searchParams.set('data', info.dateStr);
                     window.location.href = url.toString();
                 },
                 select: (info) => {
-                    const url = new URL(window.location.origin + '/ordens-servico');
+                    const appBase = document.querySelector('meta[name="app-url"]')?.content
+                        ?? window.location.origin;
+                    const url = new URL(`${appBase.replace(/\/$/, '')}/ordens-servico`);
                     url.searchParams.set('data', info.startStr.split('T')[0]);
                     window.location.href = url.toString();
                 },

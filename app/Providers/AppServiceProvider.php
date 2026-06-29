@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Support\Subdirectory;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,19 +22,13 @@ class AppServiceProvider extends ServiceProvider
     {
         \Illuminate\Support\Facades\App::setLocale('pt_BR');
 
+        config(['session.path' => Subdirectory::sessionPath()]);
+
         if ($this->app->runningInConsole()) {
             return;
         }
 
-        if (str_starts_with((string) config('app.url'), 'https://')) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
-        }
-
-        $appUrl = rtrim((string) config('app.url'), '/');
-
-        if ($appUrl !== '') {
-            \Illuminate\Support\Facades\URL::forceRootUrl($appUrl);
-        }
+        Subdirectory::configureUrls();
 
         \Illuminate\Support\Facades\Vite::createAssetPathsUsing(
             fn (string $path, ?bool $secure) => asset($path)
