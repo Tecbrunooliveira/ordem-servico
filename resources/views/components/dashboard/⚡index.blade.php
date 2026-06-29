@@ -32,10 +32,10 @@ new class extends Component
         @endforeach
     </div>
 
-    {{-- Linha do meio --}}
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+    {{-- Agenda + Avisos lado a lado --}}
+    <div class="dashboard-panels grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         {{-- Agenda de Hoje --}}
-        <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div class="flex min-h-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                 <h2 class="font-semibold text-slate-900">Agenda de Hoje</h2>
             </div>
@@ -72,7 +72,7 @@ new class extends Component
         </div>
 
         {{-- Avisos e Notificações --}}
-        <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div class="flex min-h-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                 <h2 class="font-semibold text-slate-900">Avisos e Notificações</h2>
                 <a href="{{ route('tarefas.index') }}" class="text-xs font-medium text-brand-600 hover:text-brand-700">Ver todas →</a>
