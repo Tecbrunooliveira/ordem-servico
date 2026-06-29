@@ -13,7 +13,7 @@
 
     <title>{{ $title }} — {{ config('navigation.brand.name') }}</title>
 
-    {!! \App\Support\ViteManifest::tags(['resources/css/app.css', 'resources/js/app.js']) !!}
+    {!! \App\Support\ViteManifest::styles(['resources/css/app.css']) !!}
     @livewireStyles
     <link href="{{ asset('vendor/wireui/wireui.css') }}" rel="stylesheet" type="text/css">
 </head>
@@ -55,6 +55,7 @@
     </div>
 
     @livewireScripts
+    {!! \App\Support\ViteManifest::scripts(['resources/js/app.js']) !!}
     <script src="{{ asset('vendor/wireui/wireui.js') }}" defer></script>
     <script>
         window.Wireui = {

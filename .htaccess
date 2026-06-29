@@ -4,10 +4,10 @@ DirectoryIndex index.php
     RewriteEngine On
     RewriteBase /osv2/
 
-    # Arquivos estáticos dentro de public/
+    # Arquivos estáticos dentro de public/ (Livewire é rota dinâmica — não incluir aqui)
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(build|css|js|fonts|storage|vendor|wireui|livewire[^/]*)/(.*)$ public/$1/$2 [L]
+    RewriteRule ^(build|css|js|fonts|storage|vendor|wireui)/(.*)$ public/$1/$2 [L]
 
     # Demais rotas → index.php na raiz
     RewriteCond %{REQUEST_FILENAME} !-f

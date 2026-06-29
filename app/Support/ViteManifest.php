@@ -14,6 +14,11 @@ class ViteManifest
 
     public static function tags(array $entries): string
     {
+        return self::styles($entries).self::scripts($entries);
+    }
+
+    public static function styles(array $entries = ['resources/css/app.css']): string
+    {
         if (Vite::isRunningHot()) {
             return Vite::withEntryPoints($entries)->toHtml();
         }
@@ -33,6 +38,26 @@ class ViteManifest
                 $html .= self::stylesheetTag($file);
                 $loadedStyles[] = $file;
             }
+        }
+
+        return $html;
+    }
+
+    public static function scripts(array $entries = ['resources/js/app.js']): string
+    {
+        if (Vite::isRunningHot()) {
+            return '';
+        }
+
+        $html = '';
+        $manifest = self::manifest();
+
+        foreach ($entries as $entry) {
+            if (! isset($manifest[$entry]['file'])) {
+                continue;
+            }
+
+            $file = $manifest[$entry]['file'];
 
             if (str_ends_with($file, '.js')) {
                 $html .= self::scriptTag($file);

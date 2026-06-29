@@ -488,7 +488,7 @@ new class extends Component
         @php $temFiltros = $busca !== '' || $filtroAtivo !== ''; @endphp
 
         <div class="mb-4 space-y-4">
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div class="page-list-stats">
                 <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
                     <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Total</p>
                     <p class="mt-1 text-2xl font-semibold text-slate-900">{{ $totalClientes }}</p>
@@ -503,9 +503,9 @@ new class extends Component
                 </div>
             </div>
 
-            <div class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-                <div class="flex flex-1 flex-col gap-3 lg:flex-row lg:items-end">
-                    <div class="flex-1">
+            <div class="page-list-toolbar">
+                <div class="page-list-toolbar-filters">
+                    <div class="min-w-0 flex-1">
                         <x-input
                             wire:model.live.debounce.300ms="busca"
                             icon="magnifying-glass"
@@ -514,7 +514,7 @@ new class extends Component
                         />
                     </div>
 
-                    <div class="w-full lg:w-48">
+                    <div class="filter-status">
                         <x-native-select wire:model.live="filtroAtivo" label="Status">
                             <option value="">Todos</option>
                             <option value="1">Ativos</option>
@@ -523,7 +523,10 @@ new class extends Component
                     </div>
                 </div>
 
-                <x-button primary icon="plus" label="Novo Cliente" wire:click="create" />
+                <button type="button" wire:click="create" class="btn-primary shrink-0">
+                    <x-icon name="plus" class="h-4 w-4" />
+                    Novo Cliente
+                </button>
             </div>
 
             @if ($temFiltros)
@@ -656,7 +659,10 @@ new class extends Component
                                             <p class="mt-1 max-w-sm text-sm text-slate-600">
                                                 Cadastre o primeiro cliente para vincular às ordens de serviço.
                                             </p>
-                                            <x-button class="mt-4" primary icon="plus" label="Novo Cliente" wire:click="create" />
+                                            <button type="button" wire:click="create" class="btn-primary mt-4">
+                                                <x-icon name="plus" class="h-4 w-4" />
+                                                Novo Cliente
+                                            </button>
                                         @endif
                                     </div>
                                 </td>
