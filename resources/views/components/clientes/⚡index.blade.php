@@ -238,6 +238,32 @@ new class extends Component
         $this->showForm = true;
     }
 
+    /** @param  array<string, string>  $dados */
+    public function aplicarDadosCnpjMapeados(array $dados): void
+    {
+        $dados = validator($dados, [
+            'nome' => ['nullable', 'string', 'max:255'],
+            'documento' => ['nullable', 'string', 'max:20'],
+            'email' => ['nullable', 'string', 'email', 'max:255'],
+            'telefone' => ['nullable', 'string', 'max:20'],
+            'cidade' => ['nullable', 'string', 'max:255'],
+            'estado' => ['nullable', 'string', 'max:2'],
+            'rua' => ['nullable', 'string', 'max:255'],
+            'numero' => ['nullable', 'string', 'max:20'],
+            'bairro' => ['nullable', 'string', 'max:255'],
+        ])->validate();
+
+        $this->nome = $dados['nome'] ?? $this->nome;
+        $this->documento = $dados['documento'] ?? $this->documento;
+        $this->email = $dados['email'] ?? '';
+        $this->telefone = $dados['telefone'] ?? '';
+        $this->cidade = $dados['cidade'] ?? '';
+        $this->estado = $dados['estado'] ?? '';
+        $this->rua = $dados['rua'] ?? '';
+        $this->numero = $dados['numero'] ?? '';
+        $this->bairro = $dados['bairro'] ?? '';
+    }
+
     public function edit(int $id): void
     {
         $cliente = $this->findCliente($id);
@@ -411,11 +437,7 @@ new class extends Component
                         }));
                     },
                     async aplicarNoFormulario(mapped) {
-                        for (const [campo, valor] of Object.entries(mapped)) {
-                            await $wire.$set(campo, valor, false);
-                        }
-
-                        await $wire.$commit();
+                        await $wire.aplicarDadosCnpjMapeados(mapped);
                     },
                     async buscarCnpj(forcar = false) {
                         if (this.buscandoCnpj) {
@@ -457,8 +479,13 @@ new class extends Component
                             const mapped = this.mapCnpjResponse(data);
 
                             this.ultimoCnpjConsultado = digits;
-                            await this.aplicarNoFormulario(mapped);
-                            this.notificar('success', 'CNPJ encontrado', 'Dados preenchidos automaticamente.');
+
+                            try {
+                                await this.aplicarNoFormulario(mapped);
+                                this.notificar('success', 'CNPJ encontrado', 'Dados preenchidos automaticamente.');
+                            } catch (applyError) {
+                                this.notificar('error', 'Erro ao preencher', 'Não foi possível aplicar os dados do CNPJ.');
+                            }
                         } catch (error) {
                             this.notificar(
                                 'error',

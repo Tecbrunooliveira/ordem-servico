@@ -7,14 +7,6 @@ import Sortable from 'sortablejs';
 
 window.Sortable = Sortable;
 
-function dispatchWireUiNotification(icon, title, description, timeout = 4000) {
-    window.dispatchEvent(new CustomEvent('wireui:notification', {
-        detail: {
-            options: { icon, title, description, timeout },
-        },
-    }));
-}
-
 document.addEventListener('livewire:init', () => {
     Livewire.hook('request', ({ fail }) => {
         fail(({ status, content, preventDefault }) => {
@@ -24,16 +16,9 @@ document.addEventListener('livewire:init', () => {
                 || html.includes('This Page Does Not Exist')
                 || html.includes('Opening and ending tag mismatch');
 
-            if (! isBrokenResponse) {
-                return;
+            if (isBrokenResponse) {
+                preventDefault();
             }
-
-            preventDefault();
-            dispatchWireUiNotification(
-                'error',
-                'Erro de comunicação',
-                'Não foi possível completar a ação. Recarregue a página e tente novamente.',
-            );
         });
     });
 });

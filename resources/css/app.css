@@ -424,14 +424,39 @@ main table [x-ref='popover'] {
     box-shadow: 0 0 4px 2px #6366ee;
 }
 
-/* WireUI: força tema claro nos campos (evita fundo escuro com prefers-color-scheme: dark) */
+/*
+ * WireUI aplica dark:bg-* com prefers-color-scheme: dark no wrapper do campo.
+ * Forçamos tema claro em todo o conteúdo (sem "modo escuro" nos formulários).
+ */
+#app-layout-main [data-name='form.wrapper.container'] {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+    --tw-ring-color: #e2e8f0 !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+}
+
+#app-layout-main [data-name='form.wrapper.container']:focus-within {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.15) !important;
+}
+
+#app-layout-main [data-name='form.wrapper.container'] input,
+#app-layout-main [data-name='form.wrapper.container'] select,
+#app-layout-main [data-name='form.wrapper.container'] textarea {
+    background-color: transparent !important;
+    color: #0f172a !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
 #app-layout-main input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
 #app-layout-main select,
 #app-layout-main textarea,
 #app-layout-main [role='combobox'] {
     background-color: #ffffff !important;
     color: #0f172a !important;
-    border-color: #cbd5e1 !important;
 }
 
 #app-layout-main input::placeholder,
@@ -439,21 +464,27 @@ main table [x-ref='popover'] {
     color: #94a3b8 !important;
 }
 
-#app-layout-main label {
-    color: #334155;
+#app-layout-main label,
+#app-layout-main [data-name='form.wrapper.header'] label {
+    color: #334155 !important;
 }
 
-/* Notificações: texto legível e sem vazar HTML de erro */
-[class*='wireui-notification'],
-[class*='notification'] {
-    max-width: min(24rem, calc(100vw - 2rem));
-    word-break: break-word;
+#app-layout-main [data-name='form.wrapper.container.prefix'],
+#app-layout-main [data-name='form.wrapper.container.suffix'] {
+    color: #94a3b8 !important;
 }
 
-[class*='wireui-notification'] [class*='description'],
-[class*='notification'] [class*='description'] {
-    color: #475569 !important;
-    font-size: 0.875rem;
-    line-height: 1.4;
-    white-space: normal;
+@media (prefers-color-scheme: dark) {
+    #app-layout-main [data-name='form.wrapper.container'] {
+        background-color: #ffffff !important;
+        border-color: #e2e8f0 !important;
+        --tw-ring-color: #e2e8f0 !important;
+    }
+
+    #app-layout-main [data-name='form.wrapper.container'] input,
+    #app-layout-main [data-name='form.wrapper.container'] select,
+    #app-layout-main [data-name='form.wrapper.container'] textarea {
+        background-color: transparent !important;
+        color: #0f172a !important;
+    }
 }
