@@ -26,8 +26,8 @@
     --color-sidebar-from: #005300;
     --color-sidebar-via: #004200;
     --color-sidebar-to: #005A00;
-    --color-sidebar: #004200;
-    --color-sidebar-text: rgba(255, 255, 255, 0.78);
+    --color-sidebar: #ffffff;
+    --color-sidebar-text: #334155;
 
     --color-positive-50: #ecfdf5;
     --color-positive-100: #d1fae5;
@@ -114,12 +114,43 @@
 }
 
 #app-sidebar {
-    background: linear-gradient(to bottom right, var(--color-sidebar-from), var(--color-sidebar-via), var(--color-sidebar-to));
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: #ffffff;
+    border-right: 1px solid rgba(0, 83, 0, 0.08);
+    box-shadow: 4px 0 24px rgba(0, 66, 0, 0.05);
+}
+
+#app-sidebar::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, var(--color-sidebar-from), var(--color-sidebar-via), var(--color-sidebar-to));
+    pointer-events: none;
+}
+
+#app-sidebar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background:
+        radial-gradient(circle at top right, rgba(0, 83, 0, 0.07), transparent 55%),
+        linear-gradient(to bottom, rgba(0, 83, 0, 0.03), transparent 35%);
+    pointer-events: none;
+}
+
+#app-sidebar > * {
+    position: relative;
+    z-index: 1;
 }
 
 .sidebar-nav {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+    scrollbar-color: rgba(0, 83, 0, 0.18) transparent;
     overscroll-behavior: contain;
 }
 
@@ -229,16 +260,16 @@
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.18);
+    background-color: rgba(0, 83, 0, 0.14);
     border-radius: 9999px;
 }
 
 .sidebar-nav:hover::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.35);
+    background-color: rgba(0, 83, 0, 0.28);
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb:active {
-    background-color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(0, 83, 0, 0.4);
 }
 
 @supports (scrollbar-gutter: stable) {
