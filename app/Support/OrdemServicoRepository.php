@@ -250,7 +250,7 @@ class OrdemServicoRepository
             return '—';
         }
 
-        $texto = \Illuminate\Support\Carbon::parse($data)->format('d/m/Y');
+        $texto = self::parseDataAgendada($data)?->format('d/m/Y') ?? '—';
         $horaFormatada = self::formatHoraParaInput($hora);
 
         if ($horaFormatada) {
@@ -258,6 +258,91 @@ class OrdemServicoRepository
         }
 
         return $texto;
+    }
+
+    public static function formatDataListagem(?string $data): string
+    {
+        if (blank($data)) {
+            return '—';
+        }
+
+        return self::parseDataAgendada($data)?->format('d/m/Y') ?? '—';
+    }
+
+    public static function formatHoraListagem(?string $data, ?string $hora): ?string
+    {
+        if (blank($data)) {
+            return null;
+        }
+
+        return self::formatHoraParaInput($hora) ?? '—';
+    }
+
+    public static function diaAgendada(?string $data): ?string
+    {
+        if (blank($data)) {
+            return null;
+        }
+
+        $dia = substr((string) $data, 0, 10);
+
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $dia) ? $dia : null;
+    }
+
+    public static function hojeLocal(): string
+    {
+        return \Illuminate\Support\Carbon::now(config('app.timezone', 'America/Sao_Paulo'))->format('Y-m-d');
+    }
+
+    public static function parseDataAgendada(?string $data): ?\Illuminate\Support\Carbon
+    {
+        $dia = self::diaAgendada($data);
+
+        if (! $dia) {
+            return null;
+        }
+
+        return \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $dia, config('app.timezone', 'America/Sao_Paulo'))->startOfDay();
+    }
+
+    /** @return array{label: string, class: string} */
+    public static function infoDataAgendada(?string $data, string $status): array
+    {
+        $diaAgendado = self::diaAgendada($data);
+
+        if (! $diaAgendado) {
+            return ['label' => 'Sem data', 'class' => 'text-slate-400'];
+        }
+
+        $hoje = self::hojeLocal();
+        $amanha = \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $hoje, config('app.timezone', 'America/Sao_Paulo'))
+            ->addDay()
+            ->format('Y-m-d');
+
+        if ($status === OrdemServicoStatus::Concluida->value) {
+            return ['label' => 'Concluída', 'class' => 'text-emerald-600'];
+        }
+
+        if ($status === OrdemServicoStatus::Cancelada->value) {
+            return ['label' => 'Cancelada', 'class' => 'text-red-500'];
+        }
+
+        if ($diaAgendado < $hoje) {
+            return ['label' => 'Atrasada', 'class' => 'text-red-600'];
+        }
+
+        if ($diaAgendado === $hoje) {
+            return ['label' => 'Hoje', 'class' => 'text-brand-600'];
+        }
+
+        if ($diaAgendado === $amanha) {
+            return ['label' => 'Amanhã', 'class' => 'text-amber-600'];
+        }
+
+        $dias = (int) \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $hoje)
+            ->diffInDays(\Illuminate\Support\Carbon::createFromFormat('Y-m-d', $diaAgendado));
+
+        return ['label' => "Em {$dias} dias", 'class' => 'text-slate-500'];
     }
 
     public static function agendamentoDatetime(?string $data, ?string $hora): ?string

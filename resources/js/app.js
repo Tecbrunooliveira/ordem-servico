@@ -68,6 +68,45 @@ document.addEventListener('livewire:init', () => {
 });
 
 document.addEventListener('alpine:init', () => {
+    Alpine.data('ordemCronometro', ({ baseSeconds, running, startedAt }) => ({
+        baseSeconds,
+        running,
+        startedAt,
+        display: '00:00:00',
+        intervalId: null,
+
+        init() {
+            this.tick();
+            this.intervalId = setInterval(() => this.tick(), 1000);
+        },
+
+        destroy() {
+            if (this.intervalId) {
+                clearInterval(this.intervalId);
+            }
+        },
+
+        tick() {
+            let total = this.baseSeconds;
+
+            if (this.running && this.startedAt) {
+                total += Math.floor(Date.now() / 1000) - this.startedAt;
+            }
+
+            this.display = this.formatSeconds(total);
+        },
+
+        formatSeconds(total) {
+            const horas = Math.floor(total / 3600);
+            const minutos = Math.floor((total % 3600) / 60);
+            const segundos = total % 60;
+
+            return [horas, minutos, segundos]
+                .map((parte) => String(parte).padStart(2, '0'))
+                .join(':');
+        },
+    }));
+
     Alpine.data('tableRowMenu', () => ({
         open: false,
         menuStyle: '',
