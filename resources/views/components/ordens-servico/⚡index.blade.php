@@ -730,7 +730,7 @@ new class extends Component
 
     private function persistirCamposExecucao(): void
     {
-        if (! $this->visualizarOrdem) {
+        if (ClienteAccess::somenteLeitura() || ! $this->visualizarOrdem) {
             return;
         }
 
@@ -754,6 +754,10 @@ new class extends Component
 
     public function iniciarOrdem(int $id): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         $ordem = $this->findOrdem($id);
 
         if (in_array($ordem['status'], [OrdemServicoStatus::Concluida->value, OrdemServicoStatus::Cancelada->value], true)) {
@@ -784,6 +788,10 @@ new class extends Component
 
     public function solicitarPausa(int $id): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         if ($this->runningOrdemId !== $id) {
             return;
         }
@@ -795,6 +803,10 @@ new class extends Component
 
     public function confirmarPausa(): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         if (! $this->pausandoOrdemId) {
             return;
         }
@@ -837,6 +849,10 @@ new class extends Component
 
     public function solicitarFinalizacao(int $id): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         $ordem = $this->findOrdem($id);
 
         if (in_array($ordem['status'], [OrdemServicoStatus::Concluida->value, OrdemServicoStatus::Cancelada->value], true)) {
@@ -868,6 +884,10 @@ new class extends Component
 
     public function confirmarFinalizacao(): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         if (! $this->finalizandoOrdemId) {
             return;
         }
@@ -1458,7 +1478,9 @@ new class extends Component
                             <th class="px-3 py-2.5">Serviço</th>
                             <th class="whitespace-nowrap px-3 py-2.5">Agendamento</th>
                             <th class="whitespace-nowrap px-3 py-2.5">Status</th>
-                            <th class="w-[5.5rem] whitespace-nowrap px-3 py-2.5 text-center">Exec.</th>
+                            @if (! $modoSomenteLeitura)
+                                <th class="w-[5.5rem] whitespace-nowrap px-3 py-2.5 text-center">Exec.</th>
+                            @endif
                             <th class="w-24 whitespace-nowrap px-3 py-2.5 text-right">Ações</th>
                         </tr>
                     </thead>
@@ -1546,6 +1568,7 @@ new class extends Component
                                         @endif
                                     </span>
                                 </td>
+                                @if (! $modoSomenteLeitura)
                                 <td class="whitespace-nowrap px-3 py-2.5 text-center">
                                     @if (! $finalizadaLista && ($canIniciar || $canPausar || $canParar))
                                         <div class="inline-flex items-center rounded-md border border-slate-200 bg-white p-0.5 shadow-sm">
@@ -1592,12 +1615,14 @@ new class extends Component
                                         </p>
                                     @endif
                                 </td>
+                                @endif
                                 <td class="whitespace-nowrap px-3 py-2.5">
                                     <div class="flex justify-end gap-1">
                                         <button type="button" wire:click="visualizar({{ $ordem['id'] }})" title="Visualizar" class="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 hover:text-brand-600">
                                             <x-icon name="eye" class="h-3.5 w-3.5" />
                                         </button>
 
+                                        @if (! $modoSomenteLeitura)
                                         <button type="button" wire:click="edit({{ $ordem['id'] }})" title="Editar" class="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 hover:text-brand-600">
                                             <x-icon name="pencil" class="h-3.5 w-3.5" />
                                         </button>
@@ -1617,14 +1642,26 @@ new class extends Component
                                                 Gerar PDF
                                             </button>
                                         </x-table-action-menu>
+                                        @else
+                                        <button
+                                            type="button"
+                                            wire:click="gerarPdf({{ $ordem['id'] }})"
+                                            title="Gerar PDF"
+                                            class="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 hover:text-brand-600"
+                                        >
+                                            <x-icon name="document-arrow-down" class="h-3.5 w-3.5" />
+                                        </button>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-5 py-12 text-center text-slate-600">
+                                <td colspan="{{ $modoSomenteLeitura ? 6 : 7 }}" class="px-5 py-12 text-center text-slate-600">
                                     @if ($this->temFiltrosAtivos())
                                         Nenhuma ordem encontrada com os filtros aplicados.
+                                    @elseif ($modoSomenteLeitura)
+                                        Nenhuma ordem de serviço vinculada ao seu cadastro.
                                     @else
                                         Nenhuma ordem de serviço cadastrada. Clique em "Nova Ordem" para começar.
                                     @endif
@@ -1634,7 +1671,7 @@ new class extends Component
                     </tbody>
                     <tfoot class="border-t border-slate-100 bg-slate-50">
                         <tr>
-                            <td colspan="7" class="px-5 py-3 text-sm text-slate-600">
+                            <td colspan="{{ $modoSomenteLeitura ? 6 : 7 }}" class="px-5 py-3 text-sm text-slate-600">
                                 @if ($this->temFiltrosAtivos())
                                     Exibindo {{ count($ordensLista) }} de {{ $totalOrdens }} {{ $totalOrdens === 1 ? 'ordem cadastrada' : 'ordens cadastradas' }}
                                 @else
@@ -1647,7 +1684,7 @@ new class extends Component
         </div>
     @endif
 
-    @if ($visualizarOrdem)
+    @if ($showVisualizar && $visualizarOrdem)
         @php
             $ordemView = $visualizarOrdem;
             $tipoView = \App\Enums\OrdemServicoTipo::from($ordemView['tipo']);
@@ -1690,7 +1727,7 @@ new class extends Component
                 x-transition:leave="transform transition ease-in duration-200"
                 x-transition:leave-start="translate-x-0"
                 x-transition:leave-end="translate-x-full"
-                class="absolute inset-y-0 right-0 flex w-full flex-col border-l border-slate-200 bg-white shadow-2xl lg:w-[calc(100%-16rem)]"
+                class="absolute inset-y-0 right-0 flex h-full w-full flex-col border-l border-slate-200 bg-white shadow-2xl lg:w-[calc(100%-16rem)]"
             >
                 <div class="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
                     <div class="min-w-0">
@@ -1721,62 +1758,76 @@ new class extends Component
                     </div>
                 @endif
 
-                <div class="flex min-h-0 flex-1 flex-col lg:flex-row">
-                    <div class="min-h-0 flex-1 overflow-y-auto px-6 py-6 lg:border-r lg:border-slate-100">
-                        @if (! $finalizada)
-                            <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                                <div class="flex items-center gap-3">
-                                    <span class="font-mono text-lg font-semibold tabular-nums text-slate-900">
-                                        {{ $this->tempoOrdemAtual($ordemView['tempo_segundos'] ?? 0, $ordemView['id']) }}
+                <div class="task-view-drawer-panels">
+                    <section class="task-view-drawer-panel task-view-drawer-panel--details">
+                        <div class="shrink-0 border-b border-slate-100 bg-white px-6 py-3">
+                            <h3 class="text-sm font-semibold text-slate-900">Detalhes da ordem</h3>
+                        </div>
+
+                        <div class="task-view-drawer-panel__scroll px-6 py-5">
+                        @if (! $modoSomenteLeitura)
+                            @if (! $finalizada)
+                                <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-mono text-lg font-semibold tabular-nums text-slate-900">
+                                            {{ $this->tempoOrdemAtual($ordemView['tempo_segundos'] ?? 0, $ordemView['id']) }}
+                                        </span>
+                                        <span class="text-xs text-slate-500">Tempo de execução</span>
+                                    </div>
+                                    <div class="inline-flex items-center rounded-md border border-slate-200 bg-white p-0.5 shadow-sm">
+                                        @if (! $emExecucaoView && in_array($ordemView['status'], [\App\Enums\OrdemServicoStatus::Pendente->value, \App\Enums\OrdemServicoStatus::EmAndamento->value], true))
+                                            <button
+                                                type="button"
+                                                wire:click="iniciarOrdem({{ $ordemView['id'] }})"
+                                                title="{{ $pausadaView || $ordemView['status'] === \App\Enums\OrdemServicoStatus::EmAndamento->value ? 'Retomar' : 'Iniciar' }}"
+                                                class="inline-flex h-7 w-7 items-center justify-center rounded text-emerald-600 hover:bg-emerald-50"
+                                            >
+                                                <x-icon name="play" class="h-3.5 w-3.5" />
+                                            </button>
+                                        @endif
+
+                                        @if ($emExecucaoView)
+                                            <button
+                                                type="button"
+                                                wire:click="solicitarPausa({{ $ordemView['id'] }})"
+                                                title="Pausar"
+                                                class="inline-flex h-7 w-7 items-center justify-center rounded text-amber-600 hover:bg-amber-50"
+                                            >
+                                                <x-icon name="pause" class="h-3.5 w-3.5" />
+                                            </button>
+                                        @endif
+
+                                        @if ($emExecucaoView || $pausadaView || ($ordemView['tempo_segundos'] ?? 0) > 0)
+                                            <button
+                                                type="button"
+                                                wire:click="solicitarFinalizacao({{ $ordemView['id'] }})"
+                                                title="Parar"
+                                                class="inline-flex h-7 w-7 items-center justify-center rounded text-red-600 hover:bg-red-50"
+                                            >
+                                                <x-icon name="stop" class="h-3.5 w-3.5" />
+                                            </button>
+                                        @endif
+                                    </div>
+                                </div>
+                            @else
+                                <div class="mb-5 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                                    <span class="font-mono text-lg font-semibold tabular-nums text-emerald-900">
+                                        {{ $this->tempoOrdemAtual($ordemView['tempo_segundos'] ?? 0) }}
                                     </span>
-                                    <span class="text-xs text-slate-500">Tempo de execução</span>
+                                    <div class="text-xs text-emerald-700">
+                                        <p class="font-medium">Tempo total registrado</p>
+                                        @if ($ordemView['finalizada_em'])
+                                            <p>Finalizada em {{ \Illuminate\Support\Carbon::parse($ordemView['finalizada_em'])->format('d/m/Y H:i') }}</p>
+                                        @endif
+                                    </div>
                                 </div>
-                                <div class="inline-flex items-center rounded-md border border-slate-200 bg-white p-0.5 shadow-sm">
-                                    @if (! $emExecucaoView && in_array($ordemView['status'], [\App\Enums\OrdemServicoStatus::Pendente->value, \App\Enums\OrdemServicoStatus::EmAndamento->value], true))
-                                        <button
-                                            type="button"
-                                            wire:click="iniciarOrdem({{ $ordemView['id'] }})"
-                                            title="{{ $pausadaView || $ordemView['status'] === \App\Enums\OrdemServicoStatus::EmAndamento->value ? 'Retomar' : 'Iniciar' }}"
-                                            class="inline-flex h-7 w-7 items-center justify-center rounded text-emerald-600 hover:bg-emerald-50"
-                                        >
-                                            <x-icon name="play" class="h-3.5 w-3.5" />
-                                        </button>
-                                    @endif
-
-                                    @if ($emExecucaoView)
-                                        <button
-                                            type="button"
-                                            wire:click="solicitarPausa({{ $ordemView['id'] }})"
-                                            title="Pausar"
-                                            class="inline-flex h-7 w-7 items-center justify-center rounded text-amber-600 hover:bg-amber-50"
-                                        >
-                                            <x-icon name="pause" class="h-3.5 w-3.5" />
-                                        </button>
-                                    @endif
-
-                                    @if ($emExecucaoView || $pausadaView || ($ordemView['tempo_segundos'] ?? 0) > 0)
-                                        <button
-                                            type="button"
-                                            wire:click="solicitarFinalizacao({{ $ordemView['id'] }})"
-                                            title="Parar"
-                                            class="inline-flex h-7 w-7 items-center justify-center rounded text-red-600 hover:bg-red-50"
-                                        >
-                                            <x-icon name="stop" class="h-3.5 w-3.5" />
-                                        </button>
-                                    @endif
-                                </div>
-                            </div>
-                        @else
-                            <div class="mb-5 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-                                <span class="font-mono text-lg font-semibold tabular-nums text-emerald-900">
-                                    {{ $this->tempoOrdemAtual($ordemView['tempo_segundos'] ?? 0) }}
+                            @endif
+                        @elseif ($finalizada || ($ordemView['tempo_segundos'] ?? 0) > 0)
+                            <div class="mb-5 flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                                <span class="font-mono text-lg font-semibold tabular-nums text-slate-900">
+                                    {{ $this->tempoOrdemAtual($ordemView['tempo_segundos'] ?? 0, $ordemView['id']) }}
                                 </span>
-                                <div class="text-xs text-emerald-700">
-                                    <p class="font-medium">Tempo total registrado</p>
-                                    @if ($ordemView['finalizada_em'])
-                                        <p>Finalizada em {{ \Illuminate\Support\Carbon::parse($ordemView['finalizada_em'])->format('d/m/Y H:i') }}</p>
-                                    @endif
-                                </div>
+                                <span class="text-xs text-slate-500">Tempo registrado</span>
                             </div>
                         @endif
 
@@ -1928,15 +1979,16 @@ new class extends Component
                                 </div>
                             </div>
                         @endif
-                    </div>
+                        </div>
+                    </section>
 
-                    <div class="flex min-h-0 w-full flex-col border-t border-slate-100 bg-slate-50/50 lg:w-1/2 lg:border-t-0">
+                    <section class="task-view-drawer-panel task-view-drawer-panel--comments">
                         <div class="shrink-0 border-b border-slate-100 px-6 py-4">
                             <h3 class="text-sm font-semibold text-slate-900">Comentários</h3>
                             <p class="text-xs text-slate-500">{{ count($ordemView['comentarios'] ?? []) }} {{ count($ordemView['comentarios'] ?? []) === 1 ? 'comentário' : 'comentários' }}</p>
                         </div>
 
-                        <div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
+                        <div class="task-view-drawer-panel__scroll space-y-3 px-6 py-4">
                             @forelse (array_reverse($ordemView['comentarios'] ?? []) as $comentario)
                                 <article wire:key="comentario-ordem-{{ $comentario['id'] }}" class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                                     <div class="mb-2 flex items-start justify-between gap-3">
@@ -1975,7 +2027,7 @@ new class extends Component
                                 </div>
                             </form>
                         </div>
-                    </div>
+                    </section>
                 </div>
 
                 <div class="flex shrink-0 justify-end gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
@@ -2000,7 +2052,9 @@ new class extends Component
                             Gerar PDF
                         </button>
                     </x-dropdown>
-                    <x-button primary icon="pencil" label="Editar ordem" wire:click="edit({{ $ordemView['id'] }})" />
+                    @if (! $modoSomenteLeitura)
+                        <x-button primary icon="pencil" label="Editar ordem" wire:click="edit({{ $ordemView['id'] }})" />
+                    @endif
                 </div>
             </div>
         </div>
