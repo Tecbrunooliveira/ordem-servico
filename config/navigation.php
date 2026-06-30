@@ -10,7 +10,7 @@ return [
         [
             'label' => 'Dashboard',
             'route' => 'dashboard',
-            'icon' => 'home',
+            'icon' => 'squares-2x2',
             'permission' => null,
         ],
     ],
@@ -19,16 +19,16 @@ return [
         [
             'title' => 'Cadastros',
             'items' => [
-                ['label' => 'Clientes', 'route' => 'clientes.index', 'icon' => 'building-office', 'permission' => 'clientes.view'],
-                ['label' => 'Usuários', 'route' => 'usuarios.index', 'icon' => 'user-circle', 'permission' => 'usuarios.view'],
+                ['label' => 'Clientes', 'route' => 'clientes.index', 'icon' => 'building-office-2', 'permission' => 'clientes.view'],
+                ['label' => 'Usuários', 'route' => 'usuarios.index', 'icon' => 'identification', 'permission' => 'usuarios.view'],
             ],
         ],
         [
             'title' => 'Atividades',
             'items' => [
-                ['label' => 'Agenda', 'route' => 'agenda.index', 'icon' => 'calendar', 'permission' => 'agenda.view'],
-                ['label' => 'Tarefas', 'route' => 'tarefas.index', 'icon' => 'clipboard-document-list', 'permission' => 'tarefas.view', 'badge' => 5],
-                ['label' => 'Ordem Serviço', 'route' => 'ordens-servico.index', 'icon' => 'document-text', 'permission' => 'ordem-servico.view'],
+                ['label' => 'Agenda', 'route' => 'agenda.index', 'icon' => 'calendar-days', 'permission' => 'agenda.view'],
+                ['label' => 'Tarefas', 'route' => 'tarefas.index', 'icon' => 'clipboard-document-check', 'permission' => 'tarefas.view', 'badge' => 5],
+                ['label' => 'Ordem Serviço', 'route' => 'ordens-servico.index', 'icon' => 'wrench-screwdriver', 'permission' => 'ordem-servico.view'],
             ],
         ],
         // [
@@ -42,7 +42,7 @@ return [
         [
             'title' => 'Equipe',
             'items' => [
-                ['label' => 'Técnicos', 'route' => 'tecnicos.index', 'icon' => 'users', 'permission' => 'equipe.view'],
+                ['label' => 'Técnicos', 'route' => 'tecnicos.index', 'icon' => 'user-group', 'permission' => 'equipe.view'],
                 // ['label' => 'Alocações', 'route' => '#', 'icon' => 'user-group', 'permission' => 'equipe.view'],
             ],
         ],
@@ -56,8 +56,8 @@ return [
         [
             'title' => 'Configurações',
             'items' => [
-                ['label' => 'Configurações', 'route' => 'configuracoes.index', 'icon' => 'cog-6-tooth', 'permission' => 'config.view'],
-                ['label' => 'Permissões', 'route' => '#', 'icon' => 'shield-check', 'permission' => 'permissoes.view'],
+                ['label' => 'Configurações', 'route' => 'configuracoes.index', 'icon' => 'cog-8-tooth', 'permission' => 'config.view'],
+                ['label' => 'Permissões', 'route' => '#', 'icon' => 'key', 'permission' => 'permissoes.view'],
             ],
         ],
     ],

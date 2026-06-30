@@ -1,9 +1,9 @@
 @php
     $currentRoute = request()->route()?->getName();
-
-    $linkClasses = fn (bool $active) => $active
-        ? 'bg-[#005300]/12 text-[#004200] shadow-sm ring-1 ring-[#005300]/15'
-        : 'text-slate-600 hover:bg-[#005300]/8 hover:text-[#004200]';
+    $empresa = \App\Support\EmpresaConfig::get();
+    $nomeMarca = ! empty($empresa['razao_social'])
+        ? $empresa['razao_social']
+        : ($empresa['nome_empresa'] ?? config('navigation.brand.name'));
 @endphp
 
 <aside
@@ -12,15 +12,19 @@
     :class="sidebarOpen ? '!translate-x-0 lg:!w-64' : ''"
 >
     <div
-        class="flex shrink-0 items-center border-b border-[#005300]/10 py-5 transition-all duration-300"
-        :class="sidebarOpen ? 'gap-3 px-5' : 'justify-center px-2'"
+        class="sidebar-brand flex shrink-0 items-center border-b border-[#005300]/10 transition-all duration-300"
+        :class="sidebarOpen ? 'gap-3 px-5 py-5' : 'justify-center px-2 py-4'"
     >
-        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#005300]/10 text-[#005300] shadow-sm ring-1 ring-[#005300]/15">
-            <x-icon name="wrench-screwdriver" class="h-5 w-5" />
+        <div class="sidebar-brand__logo flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#005300] to-[#004200] text-white shadow-md shadow-[#005300]/25 ring-1 ring-[#005300]/20">
+            @if (! empty($empresa['logo']))
+                <img src="{{ $empresa['logo'] }}" alt="{{ $nomeMarca }}" class="h-8 w-8 object-contain">
+            @else
+                <x-icon name="wrench-screwdriver" class="h-5 w-5" />
+            @endif
         </div>
         <div class="min-w-0 overflow-hidden" x-show="sidebarOpen" x-cloak>
-            <p class="truncate text-sm font-semibold text-slate-900">{{ config('navigation.brand.name') }}</p>
-            <p class="truncate text-xs text-slate-500">{{ config('navigation.brand.subtitle') }}</p>
+            <p class="truncate text-sm font-bold tracking-tight text-slate-900">{{ $nomeMarca }}</p>
+            <p class="truncate text-xs font-medium text-[#005300]/70">{{ config('navigation.brand.subtitle') }}</p>
         </div>
     </div>
 
@@ -35,67 +39,42 @@
                     $canView = empty($item['permission']) || (auth()->check() && auth()->user()->can($item['permission']));
                 @endphp
                 @if ($canView)
-                    <a
-                        href="{{ Route::has($item['route']) ? route($item['route']) : '#' }}"
-                        title="{{ $item['label'] }}"
-                        @class([
-                            'flex items-center rounded-lg py-2.5 text-sm font-medium transition-colors',
-                            $linkClasses($active),
-                        ])
-                        :class="sidebarOpen ? 'gap-3 px-3' : 'justify-center px-2'"
-                    >
-                        <x-icon :name="$item['icon']" class="h-5 w-5 shrink-0" />
-                        <span class="truncate" x-show="sidebarOpen" x-cloak>{{ $item['label'] }}</span>
-                    </a>
+                    <x-layout.sidebar-link
+                        :href="Route::has($item['route']) ? route($item['route']) : '#'"
+                        :icon="$item['icon']"
+                        :label="$item['label']"
+                        :active="$active"
+                        :badge="$item['badge'] ?? null"
+                    />
                 @endif
             @endforeach
 
             @foreach (config('navigation.sections') as $section)
-                <div>
+                <div class="sidebar-section">
                     <p
-                        class="mb-2 px-3 text-[10px] font-semibold uppercase tracking-wider text-[#005300]/55"
+                        class="sidebar-section__title"
                         x-show="sidebarOpen"
                         x-cloak
                     >
                         {{ $section['title'] }}
                     </p>
-                    <div class="space-y-0.5">
+                    <div class="space-y-1">
                         @foreach ($section['items'] as $item)
                             @php
                                 $active = $currentRoute === $item['route'];
                                 $canView = empty($item['permission']) || ! auth()->check() || auth()->user()->can($item['permission']);
+                                $href = is_string($item['route']) && str_starts_with($item['route'], '#')
+                                    ? '#'
+                                    : (Route::has($item['route']) ? route($item['route']) : '#');
                             @endphp
                             @if ($canView)
-                                <a
-                                    href="{{ is_string($item['route']) && str_starts_with($item['route'], '#') ? '#' : (Route::has($item['route']) ? route($item['route']) : '#') }}"
-                                    title="{{ $item['label'] }}"
-                                    @class([
-                                        'relative flex items-center rounded-lg py-2.5 text-sm font-medium transition-colors',
-                                        $linkClasses($active),
-                                    ])
-                                    :class="sidebarOpen ? 'gap-3 px-3' : 'justify-center px-2'"
-                                >
-                                    <x-icon :name="$item['icon']" class="h-4 w-4 shrink-0 opacity-90" />
-                                    <span class="flex-1 truncate" x-show="sidebarOpen" x-cloak>{{ $item['label'] }}</span>
-                                    @if (! empty($item['badge']))
-                                        <span
-                                            x-show="sidebarOpen"
-                                            x-cloak
-                                            @class([
-                                                'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                                                'bg-[#005300] text-white' => $active,
-                                                'bg-[#005300]/12 text-[#004200]' => ! $active,
-                                            ])
-                                        >
-                                            {{ $item['badge'] }}
-                                        </span>
-                                        <span
-                                            x-show="! sidebarOpen"
-                                            x-cloak
-                                            class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#005300] ring-2 ring-white"
-                                        ></span>
-                                    @endif
-                                </a>
+                                <x-layout.sidebar-link
+                                    :href="$href"
+                                    :icon="$item['icon']"
+                                    :label="$item['label']"
+                                    :active="$active"
+                                    :badge="$item['badge'] ?? null"
+                                />
                             @endif
                         @endforeach
                     </div>
@@ -106,7 +85,7 @@
 
     <div
         class="shrink-0 border-t border-[#005300]/10 transition-all duration-300"
-        :class="sidebarOpen ? 'p-4' : 'p-2'"
+        :class="sidebarOpen ? 'p-3' : 'p-2'"
     >
         <form
             method="POST"
@@ -114,15 +93,13 @@
             :class="sidebarOpen ? '' : 'flex justify-center'"
         >
             @csrf
-            <button
-                type="submit"
-                title="Sair"
-                class="flex w-full items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600"
-                :class="sidebarOpen ? 'gap-3 px-3' : 'justify-center px-2'"
-            >
-                <x-icon name="arrow-right-start-on-rectangle" class="h-5 w-5 shrink-0" />
-                <span class="truncate" x-show="sidebarOpen" x-cloak>Sair</span>
-            </button>
+            <x-layout.sidebar-link
+                tag="button"
+                icon="arrow-right-start-on-rectangle"
+                label="Sair"
+                :danger="true"
+                class="w-full"
+            />
         </form>
     </div>
 </aside>
