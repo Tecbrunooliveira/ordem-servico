@@ -105,6 +105,32 @@ new class extends Component
         ];
     }
 
+    /** @param  array<string, string>  $dados */
+    public function aplicarDadosCnpjEmpresa(array $dados): void
+    {
+        $dados = validator($dados, [
+            'cnpj' => ['nullable', 'string', 'max:20'],
+            'razao_social' => ['nullable', 'string', 'max:255'],
+            'nome_empresa' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'string', 'email', 'max:255'],
+            'telefone' => ['nullable', 'string', 'max:20'],
+            'endereco' => ['nullable', 'string', 'max:500'],
+            'cidade' => ['nullable', 'string', 'max:100'],
+            'estado' => ['nullable', 'string', 'max:2'],
+            'cep' => ['nullable', 'string', 'max:10'],
+        ])->validate();
+
+        $this->cnpj = $dados['cnpj'] ?? $this->cnpj;
+        $this->razao_social = $dados['razao_social'] ?? '';
+        $this->nome_empresa = $dados['nome_empresa'] ?? '';
+        $this->email = $dados['email'] ?? '';
+        $this->telefone = $dados['telefone'] ?? '';
+        $this->endereco = $dados['endereco'] ?? '';
+        $this->cidade = $dados['cidade'] ?? '';
+        $this->estado = strtoupper($dados['estado'] ?? '');
+        $this->cep = $dados['cep'] ?? '';
+    }
+
     public function updatedLogo(): void
     {
         $this->validateOnly('logo', $this->rulesEmpresa());
@@ -202,12 +228,10 @@ new class extends Component
                 <div class="lg:col-span-2">
                     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                         <div class="sm:col-span-2">
-                            <x-maskable
-                                wire:model="cnpj"
-                                label="CNPJ"
-                                mask="##.###.###/####-##"
-                                emit-formatted
-                                placeholder="00.000.000/0001-00"
+                            <x-cnpj-lookup-field
+                                wire-model="cnpj"
+                                apply-method="aplicarDadosCnpjEmpresa"
+                                variant="empresa"
                             />
                         </div>
 
