@@ -363,14 +363,7 @@ new class extends Component
     {
         $this->showForm = false;
         $this->novoComentario = '';
-        $this->visualizarTarefa = $this->findTask($id);
-
-        if (! isset($this->visualizarTarefa['comentarios'])) {
-            $index = $this->findTaskIndex($id);
-            $this->tarefas[$index]['comentarios'] = [];
-            $this->visualizarTarefa = $this->tarefas[$index];
-        }
-
+        $this->visualizarTarefa = TarefaRepository::findAsArray($id);
         $this->showVisualizar = true;
     }
 
@@ -441,6 +434,7 @@ new class extends Component
     public function closeVisualizar(): void
     {
         $this->showVisualizar = false;
+        $this->visualizarTarefa = null;
         $this->novoComentario = '';
     }
 
@@ -1357,7 +1351,7 @@ new class extends Component
         --}}
     @endif
 
-    @if ($visualizarTarefa)
+    @if ($showVisualizar && $visualizarTarefa)
         @php
             $tarefaView = $visualizarTarefa;
             $prioridadeView = \App\Enums\TarefaPrioridade::from($tarefaView['prioridade']);
@@ -1367,9 +1361,10 @@ new class extends Component
             $pausadaView = $this->tarefaPausada($tarefaView);
             $emExecucaoView = $this->tarefaEmExecucao($tarefaView['id']);
             $finalizadaView = in_array($tarefaView['status'], [\App\Enums\TarefaStatus::Concluida->value, \App\Enums\TarefaStatus::Cancelada->value], true);
+            $comentariosView = $tarefaView['comentarios'] ?? [];
         @endphp
         <div
-            wire:key="visualizar-tarefa-drawer"
+            wire:key="visualizar-tarefa-drawer-{{ $tarefaView['id'] }}"
             x-data="{ open: @entangle('showVisualizar').live }"
             x-cloak
             x-show="open"
@@ -1431,7 +1426,8 @@ new class extends Component
                 @endif
 
                 <div class="flex min-h-0 flex-1 flex-col lg:flex-row">
-                    <div class="min-h-0 flex-1 overflow-y-auto px-6 py-6 lg:border-r lg:border-slate-100">
+                    {{-- Detalhes da tarefa (esquerda) --}}
+                    <div class="min-h-0 w-full overflow-y-auto px-6 py-6 lg:w-1/2 lg:border-r lg:border-slate-100">
                         @if ($cronometroDisponivel && ! $finalizadaView)
                             <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
                                 <div class="flex items-center gap-3">
@@ -1490,103 +1486,123 @@ new class extends Component
                         @endif
 
                         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                        <div class="sm:col-span-2">
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Título</label>
-                            <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
-                                {{ $tarefaView['titulo'] }}
+                            <div class="sm:col-span-2">
+                                <label class="mb-1 block text-sm font-medium text-gray-700">Título</label>
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
+                                    {{ $tarefaView['titulo'] }}
+                                </div>
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <label class="mb-1 block text-sm font-medium text-gray-700">Descrição</label>
+                                <div class="min-h-[5rem] rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm whitespace-pre-wrap text-slate-900">
+                                    {{ $tarefaView['descricao'] ?: '—' }}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-gray-700">Status</label>
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                                    <span @class(['inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold', $statusView->badgeClass()])>
+                                        {{ $statusView->label() }}
+                                    </span>
+                                    @if ($pausadaView)
+                                        <span class="ml-2 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-300">Pausada</span>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-gray-700">Prioridade</label>
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                                    <span class="inline-flex items-center gap-1.5 text-sm font-medium" style="color: {{ $prioridadeView->color() }}">
+                                        <span class="h-2 w-2 rounded-full" style="background-color: {{ $prioridadeView->color() }}"></span>
+                                        {{ $prioridadeView->label() }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-gray-700">Data vencimento</label>
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
+                                    {{ $tarefaView['data_vencimento'] ? \Illuminate\Support\Carbon::parse($tarefaView['data_vencimento'])->format('d/m/Y') : '—' }}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-gray-700">Responsável</label>
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
+                                    {{ $tarefaView['responsavel'] }}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-gray-700">Categoria</label>
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
+                                    {{ $categoriaView->label() }}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-gray-700">Data início</label>
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
+                                    {{ $tarefaView['data_inicio'] ? \Illuminate\Support\Carbon::parse($tarefaView['data_inicio'])->format('d/m/Y') : '—' }}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="mb-1 block text-sm font-medium text-gray-700">Recorrência</label>
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
+                                    {{ $recorrenciaView->label() }}
+                                </div>
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <label class="mb-2 block text-sm font-medium text-gray-700">Anexos</label>
+                                <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                                    @if (count($tarefaView['anexos'] ?? []))
+                                        <ul class="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+                                            @foreach ($tarefaView['anexos'] as $anexo)
+                                                <li class="flex items-center gap-3 px-4 py-3 text-sm">
+                                                    <x-icon name="paper-clip" class="h-4 w-4 shrink-0 text-slate-400" />
+                                                    <span class="truncate text-slate-700">{{ $anexo['nome'] }}</span>
+                                                    <span class="shrink-0 text-xs text-slate-400">({{ $anexo['tamanho'] }})</span>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    @else
+                                        <p class="text-sm text-slate-500">Nenhum anexo vinculado a esta tarefa.</p>
+                                    @endif
+                                </div>
                             </div>
                         </div>
 
-                        <div class="sm:col-span-2">
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Descrição</label>
-                            <div class="min-h-[5rem] rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm whitespace-pre-wrap text-slate-900">
-                                {{ $tarefaView['descricao'] ?: '—' }}
+                        @if (! empty($tarefaView['pausas']))
+                            <div class="mt-6 space-y-3 border-t border-slate-100 pt-6">
+                                <h3 class="text-sm font-semibold text-slate-900">Histórico de pausas</h3>
+                                <div class="space-y-2">
+                                    @foreach (array_reverse($tarefaView['pausas']) as $pausa)
+                                        <div class="rounded-lg border border-amber-100 bg-amber-50/60 px-3 py-2.5">
+                                            <p class="text-xs font-medium text-amber-800">
+                                                {{ \Illuminate\Support\Carbon::parse($pausa['em'])->format('d/m/Y H:i') }}
+                                            </p>
+                                            <p class="mt-0.5 text-sm text-amber-900">{{ $pausa['motivo'] }}</p>
+                                        </div>
+                                    @endforeach
+                                </div>
                             </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Status</label>
-                            <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                                <span @class(['inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold', $statusView->badgeClass()])>
-                                    {{ $statusView->label() }}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Prioridade</label>
-                            <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                                <span class="inline-flex items-center gap-1.5 text-sm font-medium" style="color: {{ $prioridadeView->color() }}">
-                                    <span class="h-2 w-2 rounded-full" style="background-color: {{ $prioridadeView->color() }}"></span>
-                                    {{ $prioridadeView->label() }}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Data vencimento</label>
-                            <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
-                                {{ $tarefaView['data_vencimento'] ? \Illuminate\Support\Carbon::parse($tarefaView['data_vencimento'])->format('d/m/Y') : '—' }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Responsável</label>
-                            <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
-                                {{ $tarefaView['responsavel'] }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Categoria</label>
-                            <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
-                                {{ $categoriaView->label() }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Data início</label>
-                            <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
-                                {{ \Illuminate\Support\Carbon::parse($tarefaView['data_inicio'])->format('d/m/Y') }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="mb-1 block text-sm font-medium text-gray-700">Recorrência</label>
-                            <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
-                                {{ $recorrenciaView->label() }}
-                            </div>
-                        </div>
-
-                        <div class="sm:col-span-2">
-                            <label class="mb-2 block text-sm font-medium text-gray-700">Anexos</label>
-                            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
-                                @if (count($tarefaView['anexos']))
-                                    <ul class="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
-                                        @foreach ($tarefaView['anexos'] as $anexo)
-                                            <li class="flex items-center gap-3 px-4 py-3 text-sm">
-                                                <x-icon name="paper-clip" class="h-4 w-4 shrink-0 text-slate-400" />
-                                                <span class="truncate text-slate-700">{{ $anexo['nome'] }}</span>
-                                                <span class="shrink-0 text-xs text-slate-400">({{ $anexo['tamanho'] }})</span>
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                @else
-                                    <p class="text-sm text-slate-500">Nenhum anexo vinculado a esta tarefa.</p>
-                                @endif
-                            </div>
-                        </div>
-                        </div>
+                        @endif
                     </div>
 
+                    {{-- Comentários (direita) --}}
                     <div class="flex min-h-0 w-full flex-col border-t border-slate-100 bg-slate-50/50 lg:w-1/2 lg:border-t-0">
                         <div class="shrink-0 border-b border-slate-100 px-6 py-4">
                             <h3 class="text-sm font-semibold text-slate-900">Comentários</h3>
-                            <p class="text-xs text-slate-500">{{ count($tarefaView['comentarios']) }} {{ count($tarefaView['comentarios']) === 1 ? 'comentário' : 'comentários' }}</p>
+                            <p class="text-xs text-slate-500">{{ count($comentariosView) }} {{ count($comentariosView) === 1 ? 'comentário' : 'comentários' }}</p>
                         </div>
 
                         <div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
-                            @forelse (array_reverse($tarefaView['comentarios']) as $comentario)
+                            @forelse (array_reverse($comentariosView) as $comentario)
                                 <article wire:key="comentario-{{ $comentario['id'] }}" class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                                     <div class="mb-2 flex items-start justify-between gap-3">
                                         <div class="flex items-center gap-2">
