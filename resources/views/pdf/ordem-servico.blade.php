@@ -3,122 +3,125 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>Ordem de Serviço {{ $numeroOrdem }}</title>
+    <style>
+        @page { margin: 14mm 12mm 16mm 12mm; }
+        * { box-sizing: border-box; }
+        body { font-family: DejaVu Sans, sans-serif; margin: 0; padding: 0; color: #1f2937; font-size: 9.5pt; line-height: 1.5; }
+        table { border-collapse: collapse; }
+        .muted { color: #6b7280; }
+        .label { font-size: 7pt; font-weight: bold; color: #6b7280; text-transform: uppercase; letter-spacing: 0.6pt; margin-bottom: 3pt; }
+        .value { font-size: 9.5pt; color: #111827; }
+        .value-strong { font-size: 9.5pt; font-weight: bold; color: #111827; }
+        .section-head { background-color: #f3f4f6; border-left: 3pt solid #004200; padding: 7pt 10pt; font-size: 7.5pt; font-weight: bold; color: #374151; text-transform: uppercase; letter-spacing: 0.8pt; }
+        .section-body { border: 1pt solid #e5e7eb; border-top: none; padding: 10pt 12pt; background-color: #ffffff; }
+        .field-cell { padding: 8pt 10pt; border: 1pt solid #e5e7eb; vertical-align: top; }
+        .content-box { font-size: 9.5pt; color: #374151; line-height: 1.6; }
+        .sig-box { border: 1pt solid #d1d5db; background-color: #fafafa; padding: 10pt 12pt 8pt; }
+        .sig-line { border-top: 1pt solid #374151; margin-top: 36pt; padding-top: 5pt; text-align: center; font-size: 7pt; color: #6b7280; text-transform: uppercase; letter-spacing: 0.4pt; }
+    </style>
 </head>
 @php
-    $corPrincipal = '#005300';
-    $corPrincipalClara = '#e8f3e8';
-    $corTexto = '#1a1a1a';
-    $corTextoSuave = '#4a5568';
-    $corBorda = '#c5d9c5';
-    $raioSecao = '6px';
-    $raioBadge = '4px';
-    $estiloSecao = "border: 1px solid {$corBorda}; border-radius: {$raioSecao}; overflow: hidden; margin-bottom: 12px;";
-    $estiloTituloSecao = "background-color: {$corPrincipal}; color: #ffffff; font-size: 9px; font-weight: bold; padding: 6px 12px; text-transform: uppercase; letter-spacing: 0.6px;";
-    $estiloConteudoSecao = "padding: 10px 12px; color: {$corTexto}; font-size: 10px; background-color: #fafcfa;";
-
+    $verde = '#004200';
+    $verdeEscuro = '#003300';
     $nomeEmpresa = ! empty($empresa['razao_social']) ? $empresa['razao_social'] : ($empresa['nome_empresa'] ?? '');
+    $nomeFantasia = ! empty($empresa['nome_empresa']) && $nomeEmpresa !== $empresa['nome_empresa'] ? $empresa['nome_empresa'] : '';
     $linhaLocal = trim(collect([
         $empresa['cidade'] ?? '',
         ! empty($empresa['estado']) ? $empresa['estado'] : '',
         ! empty($empresa['cep']) ? 'CEP '.$empresa['cep'] : '',
-    ])->filter()->implode(' — '));
+    ])->filter()->implode(' · '));
+    $emitidoEm = now()->format('d/m/Y \à\s H:i');
 @endphp
-<body style="font-family: DejaVu Sans, sans-serif; font-size: 10px; color: {{ $corTexto }}; margin: 0; padding: 20px 24px; line-height: 1.45;">
+<body>
 
-    {{-- Cabeçalho --}}
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 14px;">
+    {{-- Faixa superior --}}
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 0;">
         <tr>
-            {{-- Logo + empresa --}}
-            <td valign="top" style="padding-right: 14px;">
+            <td style="background-color: {{ $verde }}; padding: 11pt 14pt;">
                 <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
-                        <td width="72" valign="top" style="padding-right: 12px;">
+                        <td valign="middle">
+                            <div style="font-size: 15pt; font-weight: bold; color: #ffffff; letter-spacing: 1pt; text-transform: uppercase;">Ordem de Serviço</div>
+                            <div style="font-size: 7.5pt; color: #c8e6c8; margin-top: 2pt; letter-spacing: 0.3pt;">Documento oficial de prestação de serviços</div>
+                        </td>
+                        <td width="130" valign="middle" align="right">
+                            <div style="font-size: 7pt; color: #c8e6c8; text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 2pt;">Número</div>
+                            <div style="font-size: 20pt; font-weight: bold; color: #ffffff; line-height: 1;">{{ $numeroOrdem }}</div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    {{-- Meta + empresa --}}
+    <table width="100%" cellpadding="0" cellspacing="0" style="border: 1pt solid #e5e7eb; border-top: none; margin-bottom: 14pt;">
+        <tr>
+            <td style="padding: 12pt 14pt; border-right: 1pt solid #e5e7eb; vertical-align: top;">
+                <table cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td width="64" valign="top" style="padding-right: 12pt;">
                             @if (! empty($empresa['logo']))
-                                <img src="{{ $empresa['logo'] }}" width="68" height="68" alt="Logo" style="display: block; border: 1px solid {{ $corBorda }}; border-radius: {{ $raioSecao }};">
+                                <img src="{{ $empresa['logo'] }}" width="58" height="58" alt="Logo" style="display: block; border: 1pt solid #e5e7eb;">
                             @else
-                                <table width="68" height="68" cellpadding="0" cellspacing="0" style="border: 1px solid {{ $corPrincipal }}; background-color: {{ $corPrincipalClara }}; border-radius: {{ $raioSecao }};">
+                                <table width="58" height="58" cellpadding="0" cellspacing="0" style="border: 1pt solid #d1d5db; background-color: #f9fafb;">
                                     <tr>
-                                        <td align="center" valign="middle" style="font-size: 8px; font-weight: bold; color: {{ $corPrincipal }}; letter-spacing: 0.5px;">LOGO</td>
+                                        <td align="center" valign="middle" style="font-size: 7pt; font-weight: bold; color: {{ $verde }};">LOGO</td>
                                     </tr>
                                 </table>
                             @endif
                         </td>
                         <td valign="top">
                             @if ($nomeEmpresa !== '')
-                                <div style="font-size: 13px; font-weight: bold; color: {{ $corTexto }}; line-height: 1.25; margin-bottom: 6px; text-transform: uppercase;">
-                                    {{ $nomeEmpresa }}
-                                </div>
+                                <div style="font-size: 10.5pt; font-weight: bold; color: #111827; line-height: 1.3; margin-bottom: 3pt;">{{ $nomeEmpresa }}</div>
                             @endif
-                            <table cellpadding="0" cellspacing="0" style="font-size: 9px; color: {{ $corTextoSuave }}; line-height: 1.65;">
+                            @if ($nomeFantasia !== '')
+                                <div style="font-size: 8pt; color: #6b7280; margin-bottom: 5pt;">{{ $nomeFantasia }}</div>
+                            @endif
+                            <table cellpadding="0" cellspacing="0" style="font-size: 8pt; color: #6b7280; line-height: 1.65;">
                                 @if (! empty($empresa['cnpj']))
-                                    <tr>
-                                        <td style="padding-bottom: 1px;"><span style="color: {{ $corTexto }}; font-weight: bold;">CNPJ:</span> {{ $empresa['cnpj'] }}</td>
-                                    </tr>
+                                    <tr><td><span style="color: #374151; font-weight: bold;">CNPJ</span>&nbsp; {{ $empresa['cnpj'] }}</td></tr>
                                 @endif
                                 @if (! empty($empresa['endereco']))
-                                    <tr>
-                                        <td style="padding-bottom: 1px;">{{ $empresa['endereco'] }}</td>
-                                    </tr>
+                                    <tr><td>{{ $empresa['endereco'] }}</td></tr>
                                 @endif
                                 @if ($linhaLocal !== '')
-                                    <tr>
-                                        <td style="padding-bottom: 1px;">{{ $linhaLocal }}</td>
-                                    </tr>
+                                    <tr><td>{{ $linhaLocal }}</td></tr>
                                 @endif
-                                @if (! empty($empresa['telefone']) || ! empty($empresa['email']))
-                                    <tr>
-                                        <td style="padding-bottom: 1px;">
-                                            @if (! empty($empresa['telefone']))
-                                                <span style="color: {{ $corTexto }}; font-weight: bold;">Tel:</span> {{ $empresa['telefone'] }}
-                                            @endif
-                                            @if (! empty($empresa['telefone']) && ! empty($empresa['email']))
-                                                &nbsp;&nbsp;·&nbsp;&nbsp;
-                                            @endif
-                                            @if (! empty($empresa['email']))
-                                                {{ $empresa['email'] }}
-                                            @endif
-                                        </td>
-                                    </tr>
+                                @if (! empty($empresa['telefone']))
+                                    <tr><td><span style="color: #374151; font-weight: bold;">Tel.</span>&nbsp; {{ $empresa['telefone'] }}</td></tr>
+                                @endif
+                                @if (! empty($empresa['email']))
+                                    <tr><td>{{ $empresa['email'] }}</td></tr>
                                 @endif
                                 @if (! empty($empresa['site']))
-                                    <tr>
-                                        <td>{{ $empresa['site'] }}</td>
-                                    </tr>
+                                    <tr><td>{{ $empresa['site'] }}</td></tr>
                                 @endif
                             </table>
                         </td>
                     </tr>
                 </table>
             </td>
-
-            {{-- Bloco do documento --}}
-            <td width="200" valign="top" align="right">
-                <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid {{ $corPrincipal }}; border-radius: {{ $raioSecao }}; overflow: hidden;">
+            <td width="38%" valign="top" style="padding: 0; background-color: #f9fafb;">
+                <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
-                        <td align="center" style="background-color: {{ $corPrincipal }}; color: #ffffff; font-size: 12px; font-weight: bold; padding: 8px 10px; letter-spacing: 0.8px; text-transform: uppercase;">
-                            Ordem de Serviço
+                        <td style="padding: 8pt 12pt; border-bottom: 1pt solid #e5e7eb;">
+                            <div class="label">Data do atendimento</div>
+                            <div class="value-strong">{{ $dataDocumento }}</div>
                         </td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 10px; background-color: #ffffff;">
-                            <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 9px; color: {{ $corTexto }};">
+                        <td style="padding: 8pt 12pt; border-bottom: 1pt solid #e5e7eb;">
+                            <div class="label">Técnico responsável</div>
+                            <div class="value-strong">{{ $tecnico }}</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8pt 12pt;">
+                            <div class="label">Tipo de chamado</div>
+                            <table cellpadding="0" cellspacing="0" style="margin-top: 4pt;">
                                 <tr>
-                                    <td width="42%" style="font-weight: bold; padding: 2px 0; color: {{ $corTextoSuave }};">Nº da Ordem</td>
-                                    <td align="right" style="font-weight: bold; padding: 2px 0;">{{ $numeroOrdem }}</td>
-                                </tr>
-                                <tr>
-                                    <td colspan="2" style="border-top: 1px solid {{ $corBorda }}; padding: 0; height: 1px; line-height: 1px; font-size: 1px;">&nbsp;</td>
-                                </tr>
-                                <tr>
-                                    <td style="font-weight: bold; padding: 3px 0 2px; color: {{ $corTextoSuave }};">Data</td>
-                                    <td align="right" style="padding: 3px 0 2px;">{{ $dataDocumento }}</td>
-                                </tr>
-                                <tr>
-                                    <td colspan="2" style="border-top: 1px solid {{ $corBorda }}; padding: 0; height: 1px; line-height: 1px; font-size: 1px;">&nbsp;</td>
-                                </tr>
-                                <tr>
-                                    <td style="font-weight: bold; padding: 3px 0 2px; color: {{ $corTextoSuave }};">Técnico</td>
-                                    <td align="right" style="padding: 3px 0 2px;">{{ $tecnico }}</td>
+                                    <td style="background-color: {{ $verde }}; color: #ffffff; font-size: 7.5pt; font-weight: bold; padding: 3pt 8pt; text-transform: uppercase; letter-spacing: 0.4pt;">{{ $tipo }}</td>
                                 </tr>
                             </table>
                         </td>
@@ -128,129 +131,103 @@
         </tr>
     </table>
 
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 14px;">
+    {{-- Cliente --}}
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 12pt;">
+        <tr><td class="section-head">01 · Dados do cliente</td></tr>
         <tr>
-            <td style="border-bottom: 3px solid {{ $corPrincipal }}; font-size: 1px; line-height: 1px;">&nbsp;</td>
+            <td class="section-body" style="padding: 0;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td width="50%" class="field-cell" style="border-top: none; border-left: none;">
+                            <div class="label">Nome / Razão social</div>
+                            <div class="value-strong">{{ $cliente['nome'] ?? '—' }}</div>
+                        </td>
+                        <td width="50%" class="field-cell" style="border-top: none; border-right: none;">
+                            <div class="label">CNPJ / CPF</div>
+                            <div class="value">{{ $cliente['documento'] ?? '—' }}</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="field-cell" style="border-left: none;">
+                            <div class="label">Telefone</div>
+                            <div class="value">{{ $cliente['telefone'] ?? '—' }}</div>
+                        </td>
+                        <td class="field-cell" style="border-right: none;">
+                            <div class="label">E-mail</div>
+                            <div class="value">{{ $cliente['email'] ?? '—' }}</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" class="field-cell" style="border-left: none; border-right: none; border-bottom: none;">
+                            <div class="label">Endereço completo</div>
+                            <div class="value">{{ $clienteEndereco ?: '—' }}</div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
         </tr>
     </table>
 
-    {{-- Dados do cliente --}}
-    <div style="{{ $estiloSecao }}">
-        <div style="{{ $estiloTituloSecao }}">Dados do cliente</div>
-        <div style="{{ $estiloConteudoSecao }}">
-            <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 10px;">
-                <tr>
-                    <td width="50%" valign="top" style="padding: 4px 8px 4px 0; border-bottom: 1px solid {{ $corBorda }};">
-                        <div style="font-size: 8px; font-weight: bold; color: {{ $corTextoSuave }}; text-transform: uppercase; margin-bottom: 2px;">Nome</div>
-                        {{ $cliente['nome'] ?? '—' }}
-                    </td>
-                    <td width="50%" valign="top" style="padding: 4px 0 4px 8px; border-bottom: 1px solid {{ $corBorda }};">
-                        <div style="font-size: 8px; font-weight: bold; color: {{ $corTextoSuave }}; text-transform: uppercase; margin-bottom: 2px;">CNPJ</div>
-                        {{ $cliente['documento'] ?? '—' }}
-                    </td>
-                </tr>
-                <tr>
-                    <td width="50%" valign="top" style="padding: 6px 8px 4px 0; border-bottom: 1px solid {{ $corBorda }};">
-                        <div style="font-size: 8px; font-weight: bold; color: {{ $corTextoSuave }}; text-transform: uppercase; margin-bottom: 2px;">Telefone</div>
-                        {{ $cliente['telefone'] ?? '—' }}
-                    </td>
-                    <td width="50%" valign="top" style="padding: 6px 0 4px 8px; border-bottom: 1px solid {{ $corBorda }};">
-                        <div style="font-size: 8px; font-weight: bold; color: {{ $corTextoSuave }}; text-transform: uppercase; margin-bottom: 2px;">E-mail</div>
-                        {{ $cliente['email'] ?? '—' }}
-                    </td>
-                </tr>
-                <tr>
-                    <td colspan="2" valign="top" style="padding: 6px 0 2px;">
-                        <div style="font-size: 8px; font-weight: bold; color: {{ $corTextoSuave }}; text-transform: uppercase; margin-bottom: 2px;">Endereço</div>
-                        {{ $clienteEndereco }}
-                    </td>
-                </tr>
-            </table>
-        </div>
-    </div>
-
-    {{-- Descrição do chamado --}}
-    <div style="{{ $estiloSecao }}">
-        <div style="{{ $estiloTituloSecao }}">Descrição do chamado</div>
-        <div style="{{ $estiloConteudoSecao }}">
-            <table cellpadding="0" cellspacing="0" style="margin-bottom: 8px;">
-                <tr>
-                    <td style="background-color: {{ $corPrincipalClara }}; border: 1px solid {{ $corPrincipal }}; border-radius: {{ $raioBadge }}; font-size: 8px; font-weight: bold; padding: 3px 10px; color: {{ $corPrincipal }}; text-transform: uppercase; letter-spacing: 0.4px;">
-                        {{ $tipo }}
-                    </td>
-                </tr>
-            </table>
-            @if (! empty($tituloChamado))
-                <div style="font-weight: bold; font-size: 11px; margin-bottom: 6px; color: {{ $corTexto }};">{{ $tituloChamado }}</div>
-            @endif
-            <div style="font-size: 10px; color: {{ $corTexto }}; line-height: 1.55;">
-                @if (! empty($ordem['descricao']))
-                    {!! $ordem['descricao'] !!}
-                @else
-                    —
+    {{-- Chamado --}}
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 12pt;">
+        <tr><td class="section-head">02 · Descrição do chamado</td></tr>
+        <tr>
+            <td class="section-body">
+                @if (! empty($tituloChamado))
+                    <div style="font-size: 10.5pt; font-weight: bold; color: #111827; margin-bottom: 8pt; padding-bottom: 8pt; border-bottom: 1pt solid #f3f4f6;">
+                        {{ $tituloChamado }}
+                    </div>
                 @endif
-            </div>
-        </div>
-    </div>
+                <div class="content-box">
+                    @if (! empty($ordem['descricao']))
+                        {!! $ordem['descricao'] !!}
+                    @else
+                        <span class="muted">Nenhuma descrição informada.</span>
+                    @endif
+                </div>
+            </td>
+        </tr>
+    </table>
 
-    {{-- Descrição dos serviços --}}
-    <div style="{{ $estiloSecao }}">
-        <div style="{{ $estiloTituloSecao }}">Descrição dos serviços</div>
-        <div style="{{ $estiloConteudoSecao }}">
-            <div style="min-height: 48px; padding-bottom: 8px; line-height: 1.55;">
-                @if (! empty($ordem['descricao_servicos']))
-                    {!! $ordem['descricao_servicos'] !!}
-                @else
-                    —
-                @endif
-            </div>
-            <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                    <td style="border-top: 1px solid {{ $corBorda }}; padding-top: 8px;" align="right">
-                        <span style="font-size: 8px; font-weight: bold; color: {{ $corTextoSuave }}; text-transform: uppercase;">Tempo do serviço</span>
-                        <span style="font-size: 12px; font-weight: bold; color: {{ $corPrincipal }}; margin-left: 8px;">{{ $tempoOrdem }}</span>
-                    </td>
-                </tr>
-            </table>
-        </div>
-    </div>
+    {{-- Serviços --}}
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 12pt;">
+        <tr><td class="section-head">03 · Serviços executados</td></tr>
+        <tr>
+            <td class="section-body">
+                <div class="content-box" style="min-height: 52pt;">
+                    @if (! empty($ordem['descricao_servicos']))
+                        {!! $ordem['descricao_servicos'] !!}
+                    @else
+                        <span class="muted">Nenhum serviço descrito.</span>
+                    @endif
+                </div>
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 10pt;">
+                    <tr>
+                        <td align="right" style="padding: 8pt 12pt; background-color: #f0f7f0; border: 1pt solid #c5dcc5;">
+                            <span class="label" style="display: inline; margin: 0;">Tempo total do serviço</span>
+                            <span style="font-size: 12pt; font-weight: bold; color: {{ $verde }}; margin-left: 10pt;">{{ $tempoOrdem }}</span>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 
     {{-- Participantes --}}
     @if (count($participantes) > 0)
-        <div style="{{ $estiloSecao }}">
-            <div style="{{ $estiloTituloSecao }}">Participantes</div>
-            <div style="{{ $estiloConteudoSecao }}">
-                @if (count($participantes) === 1)
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                            <td style="font-weight: bold; padding-bottom: 28px; font-size: 10px; color: {{ $corTexto }};">
-                                {{ $participantes[0] }}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="border-top: 1px solid {{ $corTexto }}; padding-top: 4px; font-size: 8px; color: {{ $corTextoSuave }}; text-align: center;">
-                                Assinatura
-                            </td>
-                        </tr>
-                    </table>
-                @else
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 12pt;">
+            <tr><td class="section-head">04 · Participantes e assinaturas</td></tr>
+            <tr>
+                <td class="section-body">
                     @foreach (array_chunk($participantes, 2) as $linha)
-                        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: {{ $loop->last ? '0' : '14px' }};">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: {{ $loop->last ? '0' : '10pt' }};">
                             <tr>
                                 @foreach ($linha as $participante)
-                                    <td width="50%" valign="top" style="padding: 0 10px 0 0; vertical-align: top;">
-                                        <table width="100%" cellpadding="0" cellspacing="0">
-                                            <tr>
-                                                <td style="font-weight: bold; padding-bottom: 28px; font-size: 10px; color: {{ $corTexto }};">
-                                                    {{ $participante }}
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td style="border-top: 1px solid {{ $corTexto }}; padding-top: 4px; font-size: 8px; color: {{ $corTextoSuave }}; text-align: center;">
-                                                    Assinatura
-                                                </td>
-                                            </tr>
-                                        </table>
+                                    <td width="50%" valign="top" style="padding: {{ $loop->first ? '0 6pt 0 0' : '0 0 0 6pt' }};">
+                                        <div class="sig-box">
+                                            <div style="font-size: 9pt; font-weight: bold; color: #374151; margin-bottom: 2pt;">{{ $participante }}</div>
+                                            <div class="sig-line">Assinatura</div>
+                                        </div>
                                     </td>
                                 @endforeach
                                 @if (count($linha) === 1)
@@ -259,50 +236,67 @@
                             </tr>
                         </table>
                     @endforeach
-                @endif
-            </div>
-        </div>
+                </td>
+            </tr>
+        </table>
     @endif
 
     {{-- Observações --}}
-    <div style="{{ $estiloSecao }}">
-        <div style="{{ $estiloTituloSecao }}">Observações</div>
-        <div style="{{ $estiloConteudoSecao }}">
-            <div style="min-height: 32px; line-height: 1.55;">
-                @if (! empty($ordem['observacoes']))
-                    {!! $ordem['observacoes'] !!}
-                @else
-                    —
-                @endif
-            </div>
-        </div>
-    </div>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 12pt;">
+        <tr><td class="section-head">{{ count($participantes) > 0 ? '05' : '04' }} · Observações</td></tr>
+        <tr>
+            <td class="section-body">
+                <div class="content-box" style="min-height: 36pt;">
+                    @if (! empty($ordem['observacoes']))
+                        {!! $ordem['observacoes'] !!}
+                    @else
+                        <span class="muted">Sem observações adicionais.</span>
+                    @endif
+                </div>
+            </td>
+        </tr>
+    </table>
 
-    {{-- Termo de concordância --}}
-    <div style="{{ $estiloSecao }} margin-bottom: 0;">
-        <div style="{{ $estiloTituloSecao }}">Termo de concordância do serviço</div>
-        <div style="{{ $estiloConteudoSecao }}">
-            <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                    <td width="58%" valign="bottom" style="font-size: 9px; color: {{ $corTextoSuave }}; line-height: 1.6; padding-right: 16px;">
-                        Confirmo que o serviço foi executado conforme combinado e autorizo cobrança dos valores aqui contidos, desde que não sejam cobertos por contrato ou garantia.
-                    </td>
-                    <td width="42%" valign="bottom">
-                        <table width="100%" cellpadding="0" cellspacing="0">
-                            <tr>
-                                <td style="height: 44px;"></td>
-                            </tr>
-                            <tr>
-                                <td style="border-top: 1px solid {{ $corTexto }}; padding-top: 4px; font-size: 8px; color: {{ $corTextoSuave }}; text-align: center;">
-                                    Assinatura do responsável
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-            </table>
-        </div>
-    </div>
+    {{-- Termo --}}
+    @php $numTermo = count($participantes) > 0 ? '06' : '05'; @endphp
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 14pt;">
+        <tr><td class="section-head">{{ $numTermo }} · Termo de concordância</td></tr>
+        <tr>
+            <td class="section-body">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td width="55%" valign="top" style="padding-right: 14pt;">
+                            <div style="font-size: 8.5pt; color: #4b5563; line-height: 1.65; font-style: italic; padding: 8pt 10pt; background-color: #f9fafb; border-left: 2pt solid {{ $verde }};">
+                                Declaro que o serviço descrito neste documento foi executado conforme combinado e autorizo a cobrança dos valores aqui contidos, ressalvadas coberturas por contrato ou garantia vigente.
+                            </div>
+                        </td>
+                        <td width="45%" valign="bottom">
+                            <div class="sig-box" style="background-color: #ffffff;">
+                                <div style="height: 8pt;"></div>
+                                <div class="sig-line">Assinatura do responsável / cliente</div>
+                                <div style="text-align: center; font-size: 7pt; color: #9ca3af; margin-top: 4pt;">Nome legível · CPF/CNPJ</div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    {{-- Rodapé --}}
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1pt solid #e5e7eb; padding-top: 8pt;">
+        <tr>
+            <td style="font-size: 7pt; color: #9ca3af; line-height: 1.5;">
+                @if ($nomeEmpresa !== '')
+                    <strong style="color: #6b7280;">{{ $nomeEmpresa }}</strong><br>
+                @endif
+                Documento emitido em {{ $emitidoEm }}
+            </td>
+            <td align="right" valign="bottom" style="font-size: 7pt; color: #9ca3af;">
+                OS-{{ $numeroOrdem }} · Página 1 de 1
+            </td>
+        </tr>
+    </table>
 
 </body>
 </html>
