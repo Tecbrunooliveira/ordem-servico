@@ -4,7 +4,9 @@ set -euo pipefail
 APP_DIR="${1:-$HOME/domains/equalizeinfo.com.br/public_html/osv2}"
 PHP_BIN="${PHP_BIN:-/opt/alt/php83/usr/bin/php}"
 # Opcional: MIGRATE=1 bash scripts/deploy-server.sh
+# Se o banco foi criado via SQL: MIGRATE_BASELINE=1 MIGRATE=1 bash scripts/deploy-server.sh
 RUN_MIGRATE="${MIGRATE:-0}"
+RUN_BASELINE="${MIGRATE_BASELINE:-0}"
 
 cd "$APP_DIR"
 
@@ -19,9 +21,23 @@ echo "==> Manifest CSS: $(grep -o 'app-[^\"]*\\.css' public/build/manifest.json 
 
 rm -f public/hot
 
+if [[ "$RUN_BASELINE" == "1" ]]; then
+    echo "==> Registrando baseline de migrations (sem executar)..."
+    "$PHP_BIN" artisan migrate:mark-applied --except=2026_06_30
+fi
+
 if [[ "$RUN_MIGRATE" == "1" ]]; then
     echo "==> Rodando migrations..."
-    "$PHP_BIN" artisan migrate --force
+    if ! "$PHP_BIN" artisan migrate --force; then
+        echo ""
+        echo "==> migrate falhou (tabelas já existem sem registro no Laravel)."
+        echo "    Para sincronizar o baseline e rodar só as novas:"
+        echo "    MIGRATE_BASELINE=1 MIGRATE=1 bash scripts/deploy-server.sh"
+        echo ""
+        echo "    Ou aplique migrations pontuais, ex.:"
+        echo "    bash scripts/migrate-tarefas-cronometro.sh"
+        exit 1
+    fi
 fi
 
 "$PHP_BIN" artisan view:clear
