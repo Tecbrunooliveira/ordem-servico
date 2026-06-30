@@ -23,6 +23,7 @@ class OrdemServico extends Model
         'titulo',
         'descricao',
         'data_agendada',
+        'hora_agendada',
         'status',
         'participante',
         'participante_telefone',

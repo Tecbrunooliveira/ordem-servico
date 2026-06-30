@@ -5,7 +5,6 @@ namespace App\Support;
 use App\Enums\OrdemServicoStatus;
 use App\Enums\OrdemServicoTipo;
 use App\Models\OrdemServico;
-use Illuminate\Support\Carbon;
 
 class AgendaRepository
 {
@@ -16,6 +15,7 @@ class AgendaRepository
             ->with('cliente:id,nome')
             ->whereNotNull('data_agendada')
             ->orderBy('data_agendada')
+            ->orderBy('hora_agendada')
             ->get()
             ->map(function (OrdemServico $ordem) {
                 $tipo = $ordem->tipo instanceof OrdemServicoTipo
@@ -36,6 +36,7 @@ class AgendaRepository
                     'status' => $status->label(),
                     'descricao' => $ordem->descricao ?? '',
                     'data_agendada' => $ordem->data_agendada?->toDateString(),
+                    'hora_agendada' => OrdemServicoRepository::formatHoraParaInput($ordem->hora_agendada),
                 ];
             })
             ->all();
@@ -65,7 +66,10 @@ class AgendaRepository
             'tipoColor' => $ordem['tipoColor'],
             'status' => $ordem['status'],
             'descricao' => $ordem['descricao'],
-            'data' => Carbon::parse($ordem['data_agendada'])->format('d/m/Y'),
+            'data' => OrdemServicoRepository::formatAgendamento(
+                $ordem['data_agendada'],
+                $ordem['hora_agendada'] ?? null,
+            ),
         ];
     }
 }

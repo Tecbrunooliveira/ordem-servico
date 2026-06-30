@@ -38,6 +38,8 @@ new class extends Component
 
     public string $data_agendada = '';
 
+    public string $hora_agendada = '';
+
     public string $participante = '';
 
     public string $participante_telefone = '';
@@ -154,6 +156,7 @@ new class extends Component
             'titulo' => ['required', 'string', 'max:255'],
             'descricao' => ['nullable', 'string', 'max:10000'],
             'data_agendada' => ['nullable', 'date'],
+            'hora_agendada' => ['nullable', 'date_format:H:i'],
             'participante' => ['nullable', 'string', 'max:255'],
             'participante_telefone' => ['nullable', 'string', 'max:20'],
             'tecnico_id' => ['nullable', 'integer', Rule::in(collect($this->tecnicosDisponiveis)->pluck('id'))],
@@ -400,7 +403,7 @@ new class extends Component
         $dataDocumento = $ordem['finalizada_em']
             ? Carbon::parse($ordem['finalizada_em'])->format('d/m/Y')
             : ($ordem['data_agendada']
-                ? Carbon::parse($ordem['data_agendada'])->format('d/m/Y')
+                ? OrdemServicoRepository::formatAgendamento($ordem['data_agendada'], $ordem['hora_agendada'] ?? null)
                 : now()->format('d/m/Y'));
 
         $participantes = $this->participantesPreenchidos($ordem['participantes'] ?? []);
@@ -556,6 +559,7 @@ new class extends Component
         $this->titulo = $ordem['titulo'];
         $this->descricao = $ordem['descricao'] ?? '';
         $this->data_agendada = $ordem['data_agendada'] ?? '';
+        $this->hora_agendada = $ordem['hora_agendada'] ?? '';
         $this->participante = $ordem['participante'] ?? '';
         $this->participante_telefone = $ordem['participante_telefone'] ?? '';
         $this->tecnico_id = $ordem['tecnico_id'] ?? null;
@@ -571,6 +575,9 @@ new class extends Component
 
         $data = $this->validate();
         $data['data_agendada'] = $data['data_agendada'] ?: null;
+        $data['hora_agendada'] = $data['data_agendada']
+            ? OrdemServicoRepository::normalizeHoraAgendada($data['hora_agendada'] ?? null)
+            : null;
         $data['tecnico_id'] = $data['tecnico_id'] ?: null;
 
         if ($this->editingId) {
@@ -1034,6 +1041,11 @@ new class extends Component
         return ['label' => "Em {$dias} dias", 'class' => 'text-slate-500'];
     }
 
+    public function formatAgendamento(?string $data, ?string $hora = null): string
+    {
+        return OrdemServicoRepository::formatAgendamento($data, $hora);
+    }
+
     private function resetForm(): void
     {
         $this->reset([
@@ -1043,6 +1055,7 @@ new class extends Component
             'titulo',
             'descricao',
             'data_agendada',
+            'hora_agendada',
             'participante',
             'participante_telefone',
             'tecnico_id',
@@ -1292,7 +1305,10 @@ new class extends Component
                             @enderror
                         </div>
 
-                        <x-input wire:model="data_agendada" label="Data agendada" type="date" />
+                        <div class="grid grid-cols-1 gap-4 sm:col-span-2 sm:grid-cols-2">
+                            <x-input wire:model="data_agendada" label="Data agendada" type="date" />
+                            <x-input wire:model="hora_agendada" label="Hora agendada (opcional)" type="time" />
+                        </div>
                     </div>
 
                     <div class="flex justify-end gap-3 border-t border-slate-100 pt-5">
@@ -1475,7 +1491,7 @@ new class extends Component
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-2.5">
                                     <p class="text-sm font-medium text-slate-800">
-                                        {{ $ordem['data_agendada'] ? \Illuminate\Support\Carbon::parse($ordem['data_agendada'])->format('d/m/Y') : '—' }}
+                                        {{ $this->formatAgendamento($ordem['data_agendada'] ?? null, $ordem['hora_agendada'] ?? null) }}
                                     </p>
                                     <p @class(['text-xs font-medium', $dataInfo['class']])>
                                         {{ $dataInfo['label'] }}
@@ -1797,9 +1813,9 @@ new class extends Component
                             </div>
 
                             <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Data agendada</label>
+                                <label class="mb-1 block text-sm font-medium text-gray-700">Agendamento</label>
                                 <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
-                                    {{ $ordemView['data_agendada'] ? \Illuminate\Support\Carbon::parse($ordemView['data_agendada'])->format('d/m/Y') : '—' }}
+                                    {{ $this->formatAgendamento($ordemView['data_agendada'] ?? null, $ordemView['hora_agendada'] ?? null) }}
                                     @if ($ordemView['data_agendada'])
                                         <span @class(['ml-2 text-xs font-medium', $dataView['class']])>({{ $dataView['label'] }})</span>
                                     @endif

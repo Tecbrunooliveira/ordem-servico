@@ -71,6 +71,7 @@ class DashboardRepository
             ->with(['cliente', 'tecnico'])
             ->whereDate('data_agendada', $hoje)
             ->where('status', '!=', OrdemServicoStatus::Cancelada->value)
+            ->orderBy('hora_agendada')
             ->orderBy('titulo')
             ->get()
             ->map(function (OrdemServico $ordem): array {
@@ -80,7 +81,7 @@ class DashboardRepository
                     : '';
 
                 return [
-                    'time' => 'Hoje',
+                    'time' => OrdemServicoRepository::formatHoraLabel($ordem->hora_agendada),
                     'title' => $ordem->titulo,
                     'description' => trim($ordem->tipo->label().($ordem->descricao ? ' — '.$ordem->descricao : '')),
                     'person' => $ordem->tecnico?->nome ?? ($ordem->participante ?: 'Sem responsável'),

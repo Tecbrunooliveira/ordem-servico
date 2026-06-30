@@ -24,6 +24,7 @@ class OrdemServicoRepository
     {
         return self::query()
             ->orderByDesc('data_agendada')
+            ->orderBy('hora_agendada')
             ->orderByDesc('id')
             ->get()
             ->map(fn (OrdemServico $ordem) => self::toArray($ordem))
@@ -63,6 +64,9 @@ class OrdemServicoRepository
             'titulo' => $data['titulo'],
             'descricao' => $data['descricao'] ?? null,
             'data_agendada' => $data['data_agendada'] ?? null,
+            'hora_agendada' => ($data['data_agendada'] ?? null)
+                ? self::normalizeHoraAgendada($data['hora_agendada'] ?? null)
+                : null,
             'status' => OrdemServicoStatus::Pendente->value,
             'participante' => $data['participante'] ?? null,
             'participante_telefone' => $data['participante_telefone'] ?? null,
@@ -81,6 +85,9 @@ class OrdemServicoRepository
             'titulo' => $data['titulo'],
             'descricao' => $data['descricao'] ?? null,
             'data_agendada' => $data['data_agendada'] ?? null,
+            'hora_agendada' => ($data['data_agendada'] ?? null)
+                ? self::normalizeHoraAgendada($data['hora_agendada'] ?? null)
+                : null,
             'status' => $data['status'],
             'participante' => $data['participante'] ?? null,
             'participante_telefone' => $data['participante_telefone'] ?? null,
@@ -99,6 +106,9 @@ class OrdemServicoRepository
             'titulo' => $ordem['titulo'],
             'descricao' => $ordem['descricao'] ?? null,
             'data_agendada' => $ordem['data_agendada'] ?: null,
+            'hora_agendada' => ($ordem['data_agendada'] ?: null)
+                ? self::normalizeHoraAgendada($ordem['hora_agendada'] ?? null)
+                : null,
             'status' => $ordem['status'],
             'participante' => $ordem['participante'] ?? null,
             'participante_telefone' => $ordem['participante_telefone'] ?? null,
@@ -154,6 +164,7 @@ class OrdemServicoRepository
             'titulo' => $ordem->titulo,
             'descricao' => $ordem->descricao ?? '',
             'data_agendada' => $ordem->data_agendada?->toDateString(),
+            'hora_agendada' => self::formatHoraParaInput($ordem->hora_agendada),
             'status' => $ordem->status->value,
             'participante' => $ordem->participante ?? '',
             'participante_telefone' => $ordem->participante_telefone ?? '',
@@ -194,5 +205,69 @@ class OrdemServicoRepository
         }
 
         return ['', '', '', ''];
+    }
+
+    public static function normalizeHoraAgendada(?string $hora): ?string
+    {
+        $hora = trim((string) $hora);
+
+        if ($hora === '') {
+            return null;
+        }
+
+        if (preg_match('/^\d{2}:\d{2}$/', $hora)) {
+            return $hora.':00';
+        }
+
+        if (preg_match('/^\d{2}:\d{2}:\d{2}$/', $hora)) {
+            return $hora;
+        }
+
+        return null;
+    }
+
+    public static function formatHoraParaInput(mixed $hora): ?string
+    {
+        if ($hora === null || $hora === '') {
+            return null;
+        }
+
+        $valor = (string) $hora;
+
+        return strlen($valor) >= 5 ? substr($valor, 0, 5) : $valor;
+    }
+
+    public static function formatHoraLabel(?string $hora): string
+    {
+        $hora = self::formatHoraParaInput($hora);
+
+        return $hora ?? 'Dia todo';
+    }
+
+    public static function formatAgendamento(?string $data, ?string $hora = null): string
+    {
+        if (blank($data)) {
+            return '—';
+        }
+
+        $texto = \Illuminate\Support\Carbon::parse($data)->format('d/m/Y');
+        $horaFormatada = self::formatHoraParaInput($hora);
+
+        if ($horaFormatada) {
+            $texto .= ' · '.$horaFormatada;
+        }
+
+        return $texto;
+    }
+
+    public static function agendamentoDatetime(?string $data, ?string $hora): ?string
+    {
+        if (blank($data)) {
+            return null;
+        }
+
+        $horaFormatada = self::formatHoraParaInput($hora);
+
+        return $horaFormatada ? $data.'T'.$horaFormatada : $data;
     }
 }

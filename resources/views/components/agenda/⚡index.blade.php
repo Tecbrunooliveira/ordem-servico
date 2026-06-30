@@ -2,6 +2,7 @@
 
 use App\Enums\OrdemServicoTipo;
 use App\Support\AgendaRepository;
+use App\Support\OrdemServicoRepository;
 use Livewire\Component;
 use WireUi\Traits\WireUiActions;
 
@@ -27,23 +28,30 @@ new class extends Component
     public function events(): array
     {
         return collect($this->ordens)
-            ->sortBy('data_agendada')
-            ->map(fn (array $ordem) => [
-                'id' => (string) $ordem['id'],
-                'title' => $ordem['titulo'],
-                'start' => $ordem['data_agendada'],
-                'allDay' => true,
-                'backgroundColor' => $ordem['tipoColor'],
-                'borderColor' => $ordem['tipoColor'],
-                'extendedProps' => [
-                    'cliente' => $ordem['cliente'],
-                    'tipo' => $ordem['tipoLabel'],
-                    'tipoColor' => $ordem['tipoColor'],
-                    'status' => $ordem['status'],
-                    'descricao' => $ordem['descricao'],
-                    'data' => \Illuminate\Support\Carbon::parse($ordem['data_agendada'])->format('d/m/Y'),
-                ],
-            ])
+            ->sortBy(fn (array $ordem) => OrdemServicoRepository::agendamentoDatetime(
+                $ordem['data_agendada'],
+                $ordem['hora_agendada'] ?? null,
+            ) ?? '9999-12-31')
+            ->map(function (array $ordem) {
+                $hora = $ordem['hora_agendada'] ?? null;
+
+                return [
+                    'id' => (string) $ordem['id'],
+                    'title' => $ordem['titulo'],
+                    'start' => OrdemServicoRepository::agendamentoDatetime($ordem['data_agendada'], $hora),
+                    'allDay' => blank($hora),
+                    'backgroundColor' => $ordem['tipoColor'],
+                    'borderColor' => $ordem['tipoColor'],
+                    'extendedProps' => [
+                        'cliente' => $ordem['cliente'],
+                        'tipo' => $ordem['tipoLabel'],
+                        'tipoColor' => $ordem['tipoColor'],
+                        'status' => $ordem['status'],
+                        'descricao' => $ordem['descricao'],
+                        'data' => OrdemServicoRepository::formatAgendamento($ordem['data_agendada'], $hora),
+                    ],
+                ];
+            })
             ->values()
             ->all();
     }
@@ -75,7 +83,10 @@ new class extends Component
                 ->all(),
             'upcoming' => collect($this->ordens)
                 ->filter(fn (array $ordem) => $ordem['data_agendada'] >= now()->toDateString())
-                ->sortBy('data_agendada')
+                ->sortBy(fn (array $ordem) => OrdemServicoRepository::agendamentoDatetime(
+                    $ordem['data_agendada'],
+                    $ordem['hora_agendada'] ?? null,
+                ) ?? '9999-12-31')
                 ->take(5)
                 ->values()
                 ->all(),
@@ -133,7 +144,7 @@ new class extends Component
                                     <p class="truncate text-sm font-medium text-slate-900">{{ $ordem['titulo'] }}</p>
                                     <p class="text-xs text-slate-500">{{ $ordem['cliente'] }}</p>
                                     <p class="mt-1 text-xs font-medium text-brand-600">
-                                        {{ \Illuminate\Support\Carbon::parse($ordem['data_agendada'])->format('d/m/Y') }}
+                                        {{ OrdemServicoRepository::formatAgendamento($ordem['data_agendada'], $ordem['hora_agendada'] ?? null) }}
                                     </p>
                                 </div>
                             </div>
