@@ -10,7 +10,7 @@ new class extends Component
     use WireUiActions;
     use WithFileUploads;
 
-    public string $abaAtiva = 'empresa';
+    public ?string $secaoEditando = null;
 
     public string $nome_empresa = '';
 
@@ -44,9 +44,14 @@ new class extends Component
         'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
     ];
 
-    /** @var array<int, array{label: string, value: string}> */
-    public array $abas = [
-        ['label' => 'Empresa', 'value' => 'empresa', 'icon' => 'building-office'],
+    /** @var array<int, array{label: string, value: string, icon: string, descricao: string}> */
+    public array $secoes = [
+        [
+            'label' => 'Empresa',
+            'value' => 'empresa',
+            'icon' => 'building-office-2',
+            'descricao' => 'Nome, CNPJ, contato, endereço e logo exibidos em documentos e no sistema.',
+        ],
     ];
 
     protected function rulesEmpresa(): array
@@ -68,26 +73,36 @@ new class extends Component
 
     public function mount(): void
     {
-        $empresa = EmpresaConfig::get();
-
-        $this->nome_empresa = $empresa['nome_empresa'] ?? '';
-        $this->razao_social = $empresa['razao_social'] ?? '';
-        $this->cnpj = $empresa['cnpj'] ?? '';
-        $this->endereco = $empresa['endereco'] ?? '';
-        $this->cidade = $empresa['cidade'] ?? '';
-        $this->estado = $empresa['estado'] ?? '';
-        $this->cep = $empresa['cep'] ?? '';
-        $this->telefone = $empresa['telefone'] ?? '';
-        $this->email = $empresa['email'] ?? '';
-        $this->site = $empresa['site'] ?? '';
-        $this->logoPreview = $empresa['logo'] ?? null;
+        $this->carregarEmpresa();
     }
 
-    public function setAba(string $aba): void
+    public function editarSecao(string $secao): void
     {
-        if (collect($this->abas)->contains(fn (array $item) => $item['value'] === $aba)) {
-            $this->abaAtiva = $aba;
+        if (! collect($this->secoes)->contains(fn (array $item) => $item['value'] === $secao)) {
+            return;
         }
+
+        $this->secaoEditando = $secao;
+    }
+
+    public function voltarLista(): void
+    {
+        $this->secaoEditando = null;
+        $this->resetValidation();
+    }
+
+    /** @return array<string, string|null> */
+    public function resumoEmpresa(): array
+    {
+        $nome = trim($this->razao_social) ?: trim($this->nome_empresa) ?: 'Não configurado';
+        $local = trim(collect([$this->cidade, $this->estado])->filter()->implode(' / '));
+
+        return [
+            'nome' => $nome,
+            'cnpj' => trim($this->cnpj) ?: '—',
+            'local' => $local !== '' ? $local : '—',
+            'contato' => trim($this->email) ?: trim($this->telefone) ?: '—',
+        ];
     }
 
     public function updatedLogo(): void
@@ -130,6 +145,24 @@ new class extends Component
         ]);
 
         $this->notification()->success('Configurações salvas', 'Os dados da empresa foram atualizados.');
+        $this->carregarEmpresa();
+    }
+
+    private function carregarEmpresa(): void
+    {
+        $empresa = EmpresaConfig::get();
+
+        $this->nome_empresa = $empresa['nome_empresa'] ?? '';
+        $this->razao_social = $empresa['razao_social'] ?? '';
+        $this->cnpj = $empresa['cnpj'] ?? '';
+        $this->endereco = $empresa['endereco'] ?? '';
+        $this->cidade = $empresa['cidade'] ?? '';
+        $this->estado = $empresa['estado'] ?? '';
+        $this->cep = $empresa['cep'] ?? '';
+        $this->telefone = $empresa['telefone'] ?? '';
+        $this->email = $empresa['email'] ?? '';
+        $this->site = $empresa['site'] ?? '';
+        $this->logoPreview = $empresa['logo'] ?? null;
     }
 
     private function persistLogoPreview(): void
@@ -149,32 +182,22 @@ new class extends Component
 ?>
 
 <div>
-    <div class="mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <nav class="flex gap-1 overflow-x-auto p-2" aria-label="Abas de configuração">
-            @foreach ($abas as $aba)
-                <button
-                    type="button"
-                    wire:click="setAba('{{ $aba['value'] }}')"
-                    @class([
-                        'inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors',
-                        'bg-brand-500 text-white shadow-sm' => $abaAtiva === $aba['value'],
-                        'text-slate-600 hover:bg-slate-100 hover:text-slate-900' => $abaAtiva !== $aba['value'],
-                    ])
-                >
-                    <x-icon :name="$aba['icon']" class="h-4 w-4" />
-                    {{ $aba['label'] }}
-                </button>
-            @endforeach
-        </nav>
-    </div>
+    @if ($secaoEditando === 'empresa')
+        <div class="mb-6">
+            <button
+                type="button"
+                wire:click="voltarLista"
+                class="mb-4 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-[#004200]"
+            >
+                <x-icon name="arrow-left" class="h-4 w-4" />
+                Voltar para configurações
+            </button>
 
-    @if ($abaAtiva === 'empresa')
+            <h2 class="text-lg font-semibold text-slate-900">Dados da empresa</h2>
+            <p class="text-sm text-slate-600">Informações exibidas em documentos, relatórios e comunicações do sistema.</p>
+        </div>
+
         <form wire:submit="salvarEmpresa" class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div class="mb-6">
-                <h2 class="text-lg font-semibold text-slate-900">Dados da empresa</h2>
-                <p class="text-sm text-slate-600">Informações exibidas em documentos, relatórios e comunicações do sistema.</p>
-            </div>
-
             <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
                 <div class="lg:col-span-2">
                     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -273,9 +296,55 @@ new class extends Component
                 </div>
             </div>
 
-            <div class="mt-6 flex justify-end border-t border-slate-100 pt-5">
+            <div class="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5">
+                <x-button flat label="Cancelar" wire:click="voltarLista" />
                 <x-button primary type="submit" icon="check" label="Salvar configurações" />
             </div>
         </form>
+    @else
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold text-slate-900">Configurações</h2>
+            <p class="text-sm text-slate-600">Selecione uma opção para visualizar ou alterar.</p>
+        </div>
+
+        <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <ul class="divide-y divide-slate-100">
+                @foreach ($secoes as $secao)
+                    @php
+                        $resumo = $secao['value'] === 'empresa' ? $this->resumoEmpresa() : [];
+                    @endphp
+                    <li wire:key="config-secao-{{ $secao['value'] }}">
+                        <button
+                            type="button"
+                            wire:click="editarSecao('{{ $secao['value'] }}')"
+                            class="flex w-full items-start gap-4 px-5 py-4 text-left transition hover:bg-[#005300]/5"
+                        >
+                            <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#005300]/10 text-[#005300] ring-1 ring-[#005300]/15">
+                                <x-icon :name="$secao['icon']" class="h-5 w-5" />
+                            </span>
+
+                            <span class="min-w-0 flex-1">
+                                <span class="flex items-start justify-between gap-3">
+                                    <span>
+                                        <span class="block text-sm font-semibold text-slate-900">{{ $secao['label'] }}</span>
+                                        <span class="mt-1 block text-sm text-slate-500">{{ $secao['descricao'] }}</span>
+                                    </span>
+                                    <x-icon name="chevron-right" class="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
+                                </span>
+
+                                @if ($secao['value'] === 'empresa')
+                                    <span class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                                        <span><span class="font-medium text-slate-700">{{ $resumo['nome'] }}</span></span>
+                                        <span>CNPJ: {{ $resumo['cnpj'] }}</span>
+                                        <span>{{ $resumo['local'] }}</span>
+                                        <span>{{ $resumo['contato'] }}</span>
+                                    </span>
+                                @endif
+                            </span>
+                        </button>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
     @endif
 </div>
