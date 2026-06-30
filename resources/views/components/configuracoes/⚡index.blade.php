@@ -2,13 +2,11 @@
 
 use App\Support\EmpresaConfig;
 use Livewire\Component;
-use Livewire\WithFileUploads;
 use WireUi\Traits\WireUiActions;
 
 new class extends Component
 {
     use WireUiActions;
-    use WithFileUploads;
 
     public ?string $secaoEditando = null;
 
@@ -31,9 +29,6 @@ new class extends Component
     public string $email = '';
 
     public string $site = '';
-
-    /** @var \Livewire\Features\SupportFileUploads\TemporaryUploadedFile|null */
-    public $logo = null;
 
     public ?string $logoPreview = null;
 
@@ -67,13 +62,20 @@ new class extends Component
             'telefone' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:255'],
             'site' => ['nullable', 'string', 'max:255'],
-            'logo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,gif,webp,svg', 'max:2048'],
         ];
     }
 
     public function mount(): void
     {
+        if (request('editar') === 'empresa') {
+            $this->secaoEditando = 'empresa';
+        }
+
         $this->carregarEmpresa();
+
+        if (session('logo_ok')) {
+            $this->notification()->success('Logo enviada', (string) session('logo_ok'));
+        }
     }
 
     public function editarSecao(string $secao): void
@@ -131,32 +133,8 @@ new class extends Component
         $this->cep = $dados['cep'] ?? '';
     }
 
-    public function updatedLogo(): void
-    {
-        $this->validateOnly('logo', $this->rulesEmpresa());
-
-        try {
-            $this->persistLogoPreview();
-
-            if ($this->logoPreview) {
-                $this->notification()->success('Logo enviada', 'A imagem foi salva e já aparece no login e no menu.');
-            }
-        } catch (\Throwable $exception) {
-            report($exception);
-
-            $this->logo = null;
-            $this->logoPreview = EmpresaConfig::get()['logo'] ?? null;
-
-            $this->notification()->error(
-                'Falha ao enviar logo',
-                'Não foi possível salvar a imagem. Use PNG ou JPG (até 2 MB) e tente novamente.',
-            );
-        }
-    }
-
     public function removerLogo(): void
     {
-        $this->logo = null;
         $this->logoPreview = null;
         EmpresaConfig::removeLogo();
 
@@ -170,8 +148,6 @@ new class extends Component
     public function salvarEmpresa(): void
     {
         $this->validate($this->rulesEmpresa());
-
-        $this->persistLogoPreview();
         $this->estado = strtoupper($this->estado);
 
         EmpresaConfig::save([
@@ -207,16 +183,6 @@ new class extends Component
         $this->site = $empresa['site'] ?? '';
         $this->logoPreview = $empresa['logo'] ?? null;
     }
-
-    private function persistLogoPreview(): void
-    {
-        if (! $this->logo) {
-            return;
-        }
-
-        $this->logoPreview = EmpresaConfig::saveLogoFromUpload($this->logo);
-        $this->logo = null;
-    }
 };
 ?>
 
@@ -236,10 +202,11 @@ new class extends Component
             <p class="text-sm text-slate-600">Informações exibidas em documentos, relatórios e comunicações do sistema.</p>
         </div>
 
-        <form wire:submit="salvarEmpresa" class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
-                <div class="lg:col-span-2">
-                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <form id="empresa-dados-form" wire:submit="salvarEmpresa">
+                <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+                    <div class="lg:col-span-2">
+                        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                         <div class="sm:col-span-2">
                             <x-cnpj-lookup-field
                                 wire-model="cnpj"
@@ -290,62 +257,70 @@ new class extends Component
                         />
                     </div>
                 </div>
+            </form>
 
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-gray-700">Logo</label>
-                    <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
-                        <div class="mb-4 flex min-h-[8rem] items-center justify-center rounded-lg border border-slate-200 bg-white p-4">
-                            @if ($logoPreview)
-                                <img
-                                    src="{{ $logoPreview }}"
-                                    alt="Logo da empresa"
-                                    class="max-h-32 max-w-full object-contain"
-                                >
-                            @else
-                                <div class="text-center">
-                                    <x-icon name="photo" class="mx-auto h-10 w-10 text-slate-300" />
-                                    <p class="mt-2 text-sm text-slate-500">Nenhuma logo enviada</p>
-                                </div>
-                            @endif
-                        </div>
+            <form
+                action="{{ route('configuracoes.empresa.logo') }}"
+                method="POST"
+                enctype="multipart/form-data"
+                class="mt-5 border-t border-slate-100 pt-5"
+            >
+                @csrf
 
-                        <input
-                            type="file"
-                            wire:model="logo"
-                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                            class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-600"
-                        >
-
-                        @error('logo')
-                            <p class="mt-2 text-xs text-red-600">{{ $message }}</p>
-                        @enderror
-
-                        <p class="mt-2 text-xs text-slate-500">
-                            PNG, JPG ou SVG. Máximo 2 MB. Recomendado: 240×80 px (horizontal) ou 128×128 px (quadrada), fundo transparente.
-                        </p>
-
-                        <div wire:loading wire:target="logo" class="mt-2 text-xs text-brand-600">
-                            Carregando logo...
-                        </div>
-
+                <label class="mb-2 block text-sm font-medium text-gray-700">Logo</label>
+                <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                    <div class="mb-4 flex min-h-[8rem] items-center justify-center rounded-lg border border-slate-200 bg-white p-4">
                         @if ($logoPreview)
-                            <button
-                                type="button"
-                                wire:click="removerLogo"
-                                class="mt-3 text-sm font-medium text-red-600 hover:text-red-700"
+                            <img
+                                src="{{ $logoPreview }}"
+                                alt="Logo da empresa"
+                                class="max-h-32 max-w-full object-contain"
                             >
-                                Remover logo
-                            </button>
+                        @else
+                            <div class="text-center">
+                                <x-icon name="photo" class="mx-auto h-10 w-10 text-slate-300" />
+                                <p class="mt-2 text-sm text-slate-500">Nenhuma logo enviada</p>
+                            </div>
                         @endif
                     </div>
+
+                    <input
+                        type="file"
+                        name="logo"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-600"
+                        onchange="if (this.files.length) this.form.submit()"
+                    >
+
+                    @if ($errors->has('logo'))
+                        <p class="mt-2 text-xs text-red-600">{{ $errors->first('logo') }}</p>
+                    @endif
+
+                    @if (session('logo_erro'))
+                        <p class="mt-2 text-xs text-red-600">{{ session('logo_erro') }}</p>
+                    @endif
+
+                    <p class="mt-2 text-xs text-slate-500">
+                        PNG, JPG ou SVG. Máximo 5 MB. Recomendado: 240×80 px (horizontal) ou 128×128 px (quadrada), fundo transparente.
+                    </p>
+
+                    @if ($logoPreview)
+                        <button
+                            type="button"
+                            wire:click="removerLogo"
+                            class="mt-3 text-sm font-medium text-red-600 hover:text-red-700"
+                        >
+                            Remover logo
+                        </button>
+                    @endif
                 </div>
-            </div>
+            </form>
 
             <div class="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5">
                 <x-button flat label="Cancelar" wire:click="voltarLista" />
-                <x-button primary type="submit" icon="check" label="Salvar configurações" />
+                <x-button primary type="submit" form="empresa-dados-form" icon="check" label="Salvar configurações" />
             </div>
-        </form>
+        </div>
     @else
         <div class="mb-6">
             <h2 class="text-lg font-semibold text-slate-900">Configurações</h2>

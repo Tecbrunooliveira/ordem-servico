@@ -51,4 +51,7 @@ else
     echo "==> Link public/storage já existe."
 fi
 
+mkdir -p storage/app/public/empresa
+chmod -R ug+rwx storage bootstrap/cache 2>/dev/null || true
+
 echo "==> Deploy concluído."

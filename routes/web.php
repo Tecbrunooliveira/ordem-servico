@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\EmpresaLogoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -23,6 +24,8 @@ Route::middleware('auth')->group(function (): void {
     Route::view('/clientes', 'clientes')->name('clientes.index');
     Route::view('/ordens-servico', 'ordens-servico')->name('ordens-servico.index');
     Route::view('/configuracoes', 'configuracoes')->name('configuracoes.index');
+    Route::post('/configuracoes/empresa/logo', [EmpresaLogoController::class, 'store'])
+        ->name('configuracoes.empresa.logo');
     Route::view('/tecnicos', 'tecnicos')->name('tecnicos.index');
     Route::view('/usuarios', 'usuarios')->name('usuarios.index');
 });

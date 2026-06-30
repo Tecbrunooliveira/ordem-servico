@@ -80,22 +80,25 @@ class EmpresaConfig
             return null;
         }
 
-        if (! Storage::disk('public')->exists($caminhoLogo)) {
-            return null;
-        }
-
         return Subdirectory::applicationUrl('/storage/'.$caminhoLogo);
     }
 
     public static function saveLogoFromUpload(UploadedFile $file): string
     {
+        $disk = Storage::disk('public');
+        $disk->makeDirectory('empresa');
+
         $empresa = Empresa::query()->firstOrCreate(['id' => 1], self::defaultsForModel());
 
         if ($empresa->caminho_logo) {
-            Storage::disk('public')->delete($empresa->caminho_logo);
+            $disk->delete($empresa->caminho_logo);
         }
 
         $filename = $file->store('empresa', 'public');
+
+        if (! is_string($filename) || $filename === '') {
+            throw new \RuntimeException('Falha ao gravar arquivo da logo em storage/app/public/empresa.');
+        }
 
         $empresa->update(['caminho_logo' => $filename]);
 
