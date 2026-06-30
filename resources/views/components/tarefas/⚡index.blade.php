@@ -1425,14 +1425,14 @@ new class extends Component
                     </div>
                 @endif
 
-                <div class="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+                <div class="task-view-drawer-panels">
                     {{-- Detalhes da tarefa (esquerda) --}}
-                    <section class="flex min-h-0 flex-1 flex-col overflow-hidden border-b border-slate-100 lg:w-1/2 lg:flex-none lg:border-b-0 lg:border-r">
+                    <section class="task-view-drawer-panel task-view-drawer-panel--details">
                         <div class="shrink-0 border-b border-slate-100 bg-white px-6 py-3">
                             <h3 class="text-sm font-semibold text-slate-900">Detalhes da tarefa</h3>
                         </div>
 
-                        <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+                        <div class="task-view-drawer-panel__scroll px-6 py-5">
                             @if ($cronometroDisponivel && ! $finalizadaView)
                                 <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
                                     <div class="flex items-center gap-3">
@@ -1570,13 +1570,13 @@ new class extends Component
                     </section>
 
                     {{-- Comentários (direita) --}}
-                    <section class="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50/50 lg:w-1/2 lg:flex-none">
+                    <section class="task-view-drawer-panel task-view-drawer-panel--comments">
                         <div class="shrink-0 border-b border-slate-100 bg-white px-6 py-3">
                             <h3 class="text-sm font-semibold text-slate-900">Comentários</h3>
                             <p class="text-xs text-slate-500">{{ count($comentariosView) }} {{ count($comentariosView) === 1 ? 'comentário' : 'comentários' }}</p>
                         </div>
 
-                        <div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
+                        <div class="task-view-drawer-panel__scroll space-y-3 px-6 py-4">
                             @forelse (array_reverse($comentariosView) as $comentario)
                                 <article wire:key="comentario-{{ $comentario['id'] }}" class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                                     <div class="mb-2 flex items-start gap-3">

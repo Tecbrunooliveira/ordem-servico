@@ -737,3 +737,45 @@ main .text-gray-500 {
 [x-data='wireui_notifications'] [id^='notification.'] .text-secondary-900 {
     color: #334155 !important;
 }
+
+/* Drawer visualizar tarefa: detalhes à esquerda, comentários à direita */
+.task-view-drawer-panels {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.task-view-drawer-panel {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.task-view-drawer-panel--details {
+    border-right: 1px solid #e2e8f0;
+}
+
+.task-view-drawer-panel--comments {
+    background-color: rgb(248 250 252 / 0.5);
+}
+
+.task-view-drawer-panel__scroll {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+@media (max-width: 767px) {
+    .task-view-drawer-panels {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .task-view-drawer-panel--details {
+        border-right: 0;
+        border-bottom: 1px solid #e2e8f0;
+    }
+}
