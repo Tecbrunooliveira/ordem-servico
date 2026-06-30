@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\EmpresaConfig;
 use Illuminate\Database\Eloquent\Model;
 
 class Empresa extends Model
@@ -34,7 +35,7 @@ class Empresa extends Model
             return null;
         }
 
-        return asset('storage/'.$this->caminho_logo);
+        return EmpresaConfig::logoUrl($this->caminho_logo);
     }
 
     /** @return array<string, mixed> */

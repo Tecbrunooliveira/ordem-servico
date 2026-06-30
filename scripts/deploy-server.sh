@@ -44,4 +44,11 @@ fi
 "$PHP_BIN" artisan config:clear
 "$PHP_BIN" artisan route:clear
 
+if [[ ! -e public/storage ]]; then
+    echo "==> Criando link public/storage → storage/app/public..."
+    "$PHP_BIN" artisan storage:link
+else
+    echo "==> Link public/storage já existe."
+fi
+
 echo "==> Deploy concluído."

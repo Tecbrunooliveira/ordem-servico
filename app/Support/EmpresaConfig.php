@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Empresa;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 class EmpresaConfig
@@ -73,7 +74,20 @@ class EmpresaConfig
         ])->save();
     }
 
-    public static function saveLogoFromUpload(string $tempPath, string $extension): string
+    public static function logoUrl(?string $caminhoLogo): ?string
+    {
+        if (! filled($caminhoLogo)) {
+            return null;
+        }
+
+        if (! Storage::disk('public')->exists($caminhoLogo)) {
+            return null;
+        }
+
+        return Subdirectory::applicationUrl('/storage/'.$caminhoLogo);
+    }
+
+    public static function saveLogoFromUpload(UploadedFile $file): string
     {
         $empresa = Empresa::query()->firstOrCreate(['id' => 1], self::defaultsForModel());
 
@@ -81,12 +95,11 @@ class EmpresaConfig
             Storage::disk('public')->delete($empresa->caminho_logo);
         }
 
-        $filename = 'empresa/logo-'.time().'.'.$extension;
-        Storage::disk('public')->put($filename, file_get_contents($tempPath));
+        $filename = $file->store('empresa', 'public');
 
         $empresa->update(['caminho_logo' => $filename]);
 
-        return asset('storage/'.$filename);
+        return self::logoUrl($filename) ?? Subdirectory::applicationUrl('/storage/'.$filename);
     }
 
     public static function removeLogo(): void

@@ -67,7 +67,7 @@ new class extends Component
             'telefone' => ['nullable', 'string', 'max:20'],
             'email' => ['nullable', 'email', 'max:255'],
             'site' => ['nullable', 'string', 'max:255'],
-            'logo' => ['nullable', 'image', 'max:2048'],
+            'logo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,gif,webp,svg', 'max:2048'],
         ];
     }
 
@@ -134,7 +134,24 @@ new class extends Component
     public function updatedLogo(): void
     {
         $this->validateOnly('logo', $this->rulesEmpresa());
-        $this->persistLogoPreview();
+
+        try {
+            $this->persistLogoPreview();
+
+            if ($this->logoPreview) {
+                $this->notification()->success('Logo enviada', 'A imagem foi salva e já aparece no login e no menu.');
+            }
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            $this->logo = null;
+            $this->logoPreview = EmpresaConfig::get()['logo'] ?? null;
+
+            $this->notification()->error(
+                'Falha ao enviar logo',
+                'Não foi possível salvar a imagem. Use PNG ou JPG (até 2 MB) e tente novamente.',
+            );
+        }
     }
 
     public function removerLogo(): void
@@ -197,11 +214,7 @@ new class extends Component
             return;
         }
 
-        $extension = $this->logo->getClientOriginalExtension() ?: 'png';
-        $this->logoPreview = EmpresaConfig::saveLogoFromUpload(
-            $this->logo->getRealPath(),
-            $extension,
-        );
+        $this->logoPreview = EmpresaConfig::saveLogoFromUpload($this->logo);
         $this->logo = null;
     }
 };
@@ -299,9 +312,13 @@ new class extends Component
                         <input
                             type="file"
                             wire:model="logo"
-                            accept="image/*"
+                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
                             class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-600"
                         >
+
+                        @error('logo')
+                            <p class="mt-2 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
 
                         <p class="mt-2 text-xs text-slate-500">
                             PNG, JPG ou SVG. Máximo 2 MB. Recomendado: 240×80 px (horizontal) ou 128×128 px (quadrada), fundo transparente.
