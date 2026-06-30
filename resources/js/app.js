@@ -1,3 +1,8 @@
+import { NotificationCenterUtil } from './notification-center';
+
+window.NotificationCenterUtil = NotificationCenterUtil;
+NotificationCenterUtil.init();
+
 import { Calendar } from '@fullcalendar/core';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -68,6 +73,33 @@ document.addEventListener('livewire:init', () => {
 });
 
 document.addEventListener('alpine:init', () => {
+    Alpine.data('notificationCenterPanel', () => ({
+        open: false,
+        soundEnabled: NotificationCenterUtil.prefs().sound,
+        pushEnabled: NotificationCenterUtil.prefs().push,
+        pushPermission: NotificationCenterUtil.pushPermission(),
+        notificationCenter: NotificationCenterUtil,
+
+        toggle() {
+            const next = ! this.open;
+            this.open = next;
+
+            if (next) {
+                this.$wire.abrirPainel();
+            }
+        },
+
+        async togglePush() {
+            this.pushEnabled = NotificationCenterUtil.togglePush();
+            this.pushPermission = NotificationCenterUtil.pushPermission();
+        },
+
+        async requestPush() {
+            this.pushPermission = await NotificationCenterUtil.requestPushPermission();
+            this.pushEnabled = NotificationCenterUtil.prefs().push;
+        },
+    }));
+
     Alpine.data('cnpjLookupField', ({ wireModel, applyMethod, variant = 'cliente', autoFetch = true }) => ({
         buscandoCnpj: false,
         ultimoCnpjConsultado: '',

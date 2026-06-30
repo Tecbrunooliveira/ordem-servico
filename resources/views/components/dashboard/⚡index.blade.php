@@ -75,7 +75,7 @@ new class extends Component
         <div class="flex min-h-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                 <h2 class="font-semibold text-slate-900">Avisos e Notificações</h2>
-                <a href="{{ route('tarefas.index') }}" class="text-xs font-medium text-brand-600 hover:text-brand-700">Ver todas →</a>
+                <a href="{{ route('dashboard') }}" class="text-xs font-medium text-brand-600 hover:text-brand-700">Ver no painel →</a>
             </div>
             <div class="divide-y divide-slate-100">
                 @forelse ($notifications as $notification)

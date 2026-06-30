@@ -27,7 +27,7 @@ return [
             'title' => 'Atividades',
             'items' => [
                 ['label' => 'Agenda', 'route' => 'agenda.index', 'icon' => 'calendar-days', 'permission' => 'agenda.view'],
-                ['label' => 'Tarefas', 'route' => 'tarefas.index', 'icon' => 'clipboard-document-check', 'permission' => 'tarefas.view', 'badge' => 5],
+                ['label' => 'Tarefas', 'route' => 'tarefas.index', 'icon' => 'clipboard-document-check', 'permission' => 'tarefas.view'],
                 ['label' => 'Ordem Serviço', 'route' => 'ordens-servico.index', 'icon' => 'wrench-screwdriver', 'permission' => 'ordem-servico.view'],
             ],
         ],

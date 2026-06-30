@@ -42,10 +42,7 @@
                 <kbd class="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] text-slate-400 lg:inline">⌘K</kbd>
             </div>
 
-            <button type="button" class="relative rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700">
-                <x-icon name="bell" class="h-5 w-5" />
-                <span class="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">5</span>
-            </button>
+            <livewire:layout.notification-center />
 
             <div class="flex items-center gap-3 border-l border-slate-200 pl-3">
                 <img

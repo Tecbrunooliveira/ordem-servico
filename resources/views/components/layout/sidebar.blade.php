@@ -1,6 +1,7 @@
 @php
     $currentRoute = request()->route()?->getName();
     $empresa = \App\Support\EmpresaConfig::get();
+    $tarefasAlertaCount = \App\Support\NotificationCenter::tarefasAlertaCount();
     $nomeMarca = ! empty($empresa['razao_social'])
         ? $empresa['razao_social']
         : ($empresa['nome_empresa'] ?? config('navigation.brand.name'));
@@ -73,7 +74,7 @@
                                     :icon="$item['icon']"
                                     :label="$item['label']"
                                     :active="$active"
-                                    :badge="$item['badge'] ?? null"
+                                    :badge="$item['route'] === 'tarefas.index' && $tarefasAlertaCount > 0 ? $tarefasAlertaCount : ($item['badge'] ?? null)"
                                 />
                             @endif
                         @endforeach
