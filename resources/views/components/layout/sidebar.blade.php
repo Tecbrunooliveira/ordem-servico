@@ -1,11 +1,5 @@
 @php
     $currentRoute = request()->route()?->getName();
-    $usuario = auth()->user();
-    $nomeUsuario = $usuario?->nome ?? 'Usuário';
-    $papelUsuario = $usuario?->getRoleNames()->first() ?? 'Usuário';
-    $avatarUrl = $usuario
-        ? 'https://ui-avatars.com/api/?name='.urlencode($nomeUsuario).'&background=3b82f6&color=fff'
-        : 'https://ui-avatars.com/api/?name=Usuario&background=3b82f6&color=fff';
 
     $linkClasses = fn (bool $active) => $active
         ? 'bg-brand-500 text-white shadow-md shadow-brand-500/20'
@@ -114,26 +108,9 @@
         class="shrink-0 border-t border-white/10 transition-all duration-300"
         :class="sidebarOpen ? 'p-4' : 'p-2'"
     >
-        <div
-            class="flex items-center rounded-xl bg-white/5 transition-all duration-300"
-            :class="sidebarOpen ? 'gap-3 p-3' : 'justify-center p-2'"
-        >
-            <img
-                src="{{ $avatarUrl }}"
-                alt="{{ $nomeUsuario }}"
-                title="{{ $nomeUsuario }}"
-                class="h-9 w-9 shrink-0 rounded-full ring-2 ring-white/10"
-            >
-            <div class="min-w-0 overflow-hidden" x-show="sidebarOpen" x-cloak>
-                <p class="truncate text-sm font-medium text-white">{{ $nomeUsuario }}</p>
-                <p class="truncate text-xs text-slate-400">{{ $papelUsuario }}</p>
-            </div>
-        </div>
-
         <form
             method="POST"
             action="{{ route('logout') }}"
-            class="mt-2"
             :class="sidebarOpen ? '' : 'flex justify-center'"
         >
             @csrf

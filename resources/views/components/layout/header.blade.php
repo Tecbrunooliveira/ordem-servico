@@ -3,6 +3,15 @@
     'subtitle' => 'Visão geral das atividades e projetos.',
 ])
 
+@php
+    $usuario = auth()->user();
+    $nomeUsuario = $usuario?->nome ?? 'Usuário';
+    $papelUsuario = $usuario?->getRoleNames()->first() ?? 'Usuário';
+    $avatarUrl = $usuario
+        ? 'https://ui-avatars.com/api/?name='.urlencode($nomeUsuario).'&background=3b82f6&color=fff'
+        : 'https://ui-avatars.com/api/?name=Usuario&background=3b82f6&color=fff';
+@endphp
+
 <header class="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur-md">
     <div class="flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
         <div class="flex items-center gap-4">
@@ -38,11 +47,18 @@
                 <span class="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">5</span>
             </button>
 
-            <img
-                src="https://ui-avatars.com/api/?name=Joao+Silva&background=3b82f6&color=fff"
-                alt="Perfil"
-                class="h-9 w-9 rounded-full ring-2 ring-slate-100"
-            >
+            <div class="flex items-center gap-3 border-l border-slate-200 pl-3">
+                <img
+                    src="{{ $avatarUrl }}"
+                    alt="{{ $nomeUsuario }}"
+                    title="{{ $nomeUsuario }}"
+                    class="h-9 w-9 shrink-0 rounded-full ring-2 ring-slate-100"
+                >
+                <div class="hidden min-w-0 sm:block">
+                    <p class="truncate text-sm font-medium text-slate-900">{{ $nomeUsuario }}</p>
+                    <p class="truncate text-xs text-slate-500">{{ $papelUsuario }}</p>
+                </div>
+            </div>
         </div>
     </div>
 </header>
