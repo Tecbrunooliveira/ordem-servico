@@ -69,6 +69,16 @@ new class extends Component
 
     public ?int $runningTaskStartedAt = null;
 
+    public ?int $pausandoTarefaId = null;
+
+    public string $motivoPausa = '';
+
+    public ?int $finalizandoTarefaId = null;
+
+    public bool $finalizacaoRetomarTimer = false;
+
+    public string $finalTempoTotal = '';
+
     public bool $showAjusteRapido = false;
 
     public ?int $ajusteRapidoId = null;
@@ -434,6 +444,223 @@ new class extends Component
         $this->novoComentario = '';
     }
 
+    public function tarefaPausada(array $tarefa): bool
+    {
+        return ($tarefa['pausada'] ?? false)
+            && in_array($tarefa['status'], [TarefaStatus::Pendente->value, TarefaStatus::EmAndamento->value], true);
+    }
+
+    public function tarefaEmExecucao(int $tarefaId): bool
+    {
+        return $this->runningTaskId === $tarefaId;
+    }
+
+    public function segundosTarefaAtual(int $segundos, ?int $taskId = null): int
+    {
+        $total = $segundos;
+
+        if ($taskId && $this->runningTaskId === $taskId && $this->runningTaskStartedAt) {
+            $total += now()->timestamp - $this->runningTaskStartedAt;
+        }
+
+        return $total;
+    }
+
+    private function acumularTempoTarefa(int $id): void
+    {
+        if ($this->runningTaskId !== $id || ! $this->runningTaskStartedAt) {
+            return;
+        }
+
+        $index = $this->findTaskIndex($id);
+        $this->tarefas[$index]['tempo_segundos'] += now()->timestamp - $this->runningTaskStartedAt;
+        $this->runningTaskId = null;
+        $this->runningTaskStartedAt = null;
+        $this->persistTarefaIndex($index);
+    }
+
+    private function pararTimerOutraTarefa(?int $exceptId = null): void
+    {
+        if ($this->runningTaskId && $this->runningTaskId !== $exceptId) {
+            $this->acumularTempoTarefa($this->runningTaskId);
+        }
+    }
+
+    private function syncVisualizarTarefa(int $index): void
+    {
+        if ($this->visualizarTarefa && $this->visualizarTarefa['id'] === $this->tarefas[$index]['id']) {
+            $this->visualizarTarefa = $this->tarefas[$index];
+        }
+    }
+
+    public function iniciarTarefa(int $id): void
+    {
+        $tarefa = $this->findTask($id);
+
+        if (in_array($tarefa['status'], [TarefaStatus::Concluida->value, TarefaStatus::Cancelada->value], true)) {
+            return;
+        }
+
+        if ($this->runningTaskId === $id) {
+            return;
+        }
+
+        $this->pararTimerOutraTarefa($id);
+        $index = $this->findTaskIndex($id);
+
+        if (! ($this->tarefas[$index]['iniciada_em'] ?? null)) {
+            $this->tarefas[$index]['iniciada_em'] = now()->toDateTimeString();
+        }
+
+        $this->tarefas[$index]['status'] = TarefaStatus::EmAndamento->value;
+        $this->tarefas[$index]['pausada'] = false;
+        $this->tarefas[$index]['finalizada_em'] = null;
+        $this->runningTaskId = $id;
+        $this->runningTaskStartedAt = now()->timestamp;
+        $this->persistTarefaIndex($index);
+        $this->syncVisualizarTarefa($index);
+
+        $this->notification()->success('Tarefa iniciada', 'O cronômetro foi acionado e o status mudou para Em andamento.');
+        $this->dispatch('tarefas-updated');
+    }
+
+    public function solicitarPausa(int $id): void
+    {
+        if ($this->runningTaskId !== $id) {
+            return;
+        }
+
+        $this->pausandoTarefaId = $id;
+        $this->motivoPausa = '';
+        $this->resetValidation('motivoPausa');
+    }
+
+    public function confirmarPausa(): void
+    {
+        if (! $this->pausandoTarefaId) {
+            return;
+        }
+
+        $this->validate([
+            'motivoPausa' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $id = $this->pausandoTarefaId;
+
+        if ($this->runningTaskId !== $id) {
+            $this->cancelarPausa();
+
+            return;
+        }
+
+        $this->acumularTempoTarefa($id);
+        $index = $this->findTaskIndex($id);
+        $this->tarefas[$index]['status'] = TarefaStatus::Pendente->value;
+        $this->tarefas[$index]['pausada'] = true;
+        TarefaRepository::addPausa($id, trim($this->motivoPausa));
+        $this->persistTarefaIndex($index);
+        $this->tarefas[$index] = TarefaRepository::findAsArray($id);
+        $this->syncVisualizarTarefa($index);
+        $this->cancelarPausa();
+
+        $this->notification()->send([
+            'icon' => 'warning',
+            'title' => 'Tarefa pausada',
+            'description' => 'O motivo foi registrado e o cronômetro foi interrompido.',
+            'timeout' => 3000,
+        ]);
+        $this->dispatch('tarefas-updated');
+    }
+
+    public function cancelarPausa(): void
+    {
+        $this->pausandoTarefaId = null;
+        $this->motivoPausa = '';
+        $this->resetValidation('motivoPausa');
+    }
+
+    public function solicitarFinalizacao(int $id): void
+    {
+        $tarefa = $this->findTask($id);
+
+        if (in_array($tarefa['status'], [TarefaStatus::Concluida->value, TarefaStatus::Cancelada->value], true)) {
+            return;
+        }
+
+        $this->finalizacaoRetomarTimer = $this->runningTaskId === $id;
+
+        if ($this->finalizacaoRetomarTimer) {
+            $this->acumularTempoTarefa($id);
+            $tarefa = $this->findTask($id);
+        }
+
+        $this->finalizandoTarefaId = $id;
+        $this->finalTempoTotal = $this->formatTempo($tarefa['tempo_segundos'] ?? 0);
+        $this->resetValidation('finalTempoTotal');
+    }
+
+    public function confirmarFinalizacao(): void
+    {
+        if (! $this->finalizandoTarefaId) {
+            return;
+        }
+
+        $this->validate([
+            'finalTempoTotal' => ['required', 'regex:/^\d{1,2}:\d{2}:\d{2}$/'],
+        ]);
+
+        $segundos = $this->parseTempo($this->finalTempoTotal);
+
+        if ($segundos === null) {
+            $this->addError('finalTempoTotal', 'Informe um tempo válido no formato HH:MM:SS.');
+
+            return;
+        }
+
+        $id = $this->finalizandoTarefaId;
+
+        if ($this->runningTaskId === $id) {
+            $this->runningTaskId = null;
+            $this->runningTaskStartedAt = null;
+        }
+
+        $index = $this->findTaskIndex($id);
+        $this->tarefas[$index]['tempo_segundos'] = $segundos;
+        $this->tarefas[$index]['status'] = TarefaStatus::Concluida->value;
+        $this->tarefas[$index]['pausada'] = false;
+        $this->tarefas[$index]['finalizada_em'] = now()->toDateTimeString();
+        $this->persistTarefaIndex($index);
+        $this->syncVisualizarTarefa($index);
+        $this->finalizacaoRetomarTimer = false;
+        $this->cancelarFinalizacao();
+
+        $this->notification()->success(
+            'Tarefa finalizada',
+            'Tempo total: '.$this->formatTempo($segundos),
+        );
+        $this->dispatch('tarefas-updated');
+    }
+
+    public function cancelarFinalizacao(): void
+    {
+        $id = $this->finalizandoTarefaId;
+        $retomar = $this->finalizacaoRetomarTimer;
+
+        $this->finalizandoTarefaId = null;
+        $this->finalizacaoRetomarTimer = false;
+        $this->finalTempoTotal = '';
+        $this->resetValidation('finalTempoTotal');
+
+        if ($id && $retomar) {
+            $tarefa = $this->findTask($id);
+
+            if ($tarefa['status'] === TarefaStatus::EmAndamento->value && ! ($tarefa['pausada'] ?? false)) {
+                $this->runningTaskId = $id;
+                $this->runningTaskStartedAt = now()->timestamp;
+            }
+        }
+    }
+
     public function toggleFormTimer(): void
     {
         if ($this->timerRunning) {
@@ -446,24 +673,20 @@ new class extends Component
         }
     }
 
-    public function toggleTaskTimer(int $id): void
+    public function tempoAtual(int $segundos, ?int $taskId = null): string
     {
-        if ($this->runningTaskId === $id) {
-            $index = $this->findTaskIndex($id);
-            $this->tarefas[$index]['tempo_segundos'] += now()->timestamp - (int) $this->runningTaskStartedAt;
-            $this->persistTarefaIndex($index);
-            $this->runningTaskId = null;
-            $this->runningTaskStartedAt = null;
-        } else {
-            if ($this->runningTaskId) {
-                $index = $this->findTaskIndex($this->runningTaskId);
-                $this->tarefas[$index]['tempo_segundos'] += now()->timestamp - (int) $this->runningTaskStartedAt;
-                $this->persistTarefaIndex($index);
-            }
+        return $this->formatTempo($this->segundosTarefaAtual($segundos, $taskId));
+    }
 
-            $this->runningTaskId = $id;
-            $this->runningTaskStartedAt = now()->timestamp;
+    public function tempoFormAtual(): string
+    {
+        $total = $this->formTempoSegundos;
+
+        if ($this->timerRunning && $this->timerStartedAt) {
+            $total += now()->timestamp - $this->timerStartedAt;
         }
+
+        return $this->formatTempo($total);
     }
 
     public function updatedNovosAnexos(): void
@@ -516,17 +739,6 @@ new class extends Component
             ->all();
     }
 
-    public function tempoAtual(int $segundos, ?int $taskId = null): string
-    {
-        $total = $segundos;
-
-        if ($taskId && $this->runningTaskId === $taskId && $this->runningTaskStartedAt) {
-            $total += now()->timestamp - $this->runningTaskStartedAt;
-        }
-
-        return $this->formatTempo($total);
-    }
-
     public function tempoFormAtual(): string
     {
         $total = $this->formTempoSegundos;
@@ -536,6 +748,23 @@ new class extends Component
         }
 
         return $this->formatTempo($total);
+    }
+
+    private function parseTempo(string $tempo): ?int
+    {
+        if (! preg_match('/^(\d{1,2}):(\d{2}):(\d{2})$/', trim($tempo), $partes)) {
+            return null;
+        }
+
+        $horas = (int) $partes[1];
+        $minutos = (int) $partes[2];
+        $segundos = (int) $partes[3];
+
+        if ($minutos > 59 || $segundos > 59) {
+            return null;
+        }
+
+        return ($horas * 3600) + ($minutos * 60) + $segundos;
     }
 
     private function findTask(int $id): array
@@ -658,9 +887,7 @@ new class extends Component
 ?>
 
 <div>
-    @if ($runningTaskId || $timerRunning)
-        <div wire:poll.1s></div>
-    @endif
+    <div wire:poll.1s></div>
 
     @if ($showForm)
         <div class="mx-auto max-w-4xl">
@@ -857,6 +1084,7 @@ new class extends Component
                                 <th class="px-5 py-3">Prioridade</th>
                                 <th class="px-5 py-3">Status</th>
                                 <th class="px-5 py-3">Vencimento</th>
+                                <th class="px-5 py-3 text-center">Exec.</th>
                                 <th class="px-5 py-3 text-right">Ações</th>
                             </tr>
                         </thead>
@@ -865,6 +1093,16 @@ new class extends Component
                                 @php
                                     $prioridade = \App\Enums\TarefaPrioridade::from($tarefa['prioridade']);
                                     $statusEnum = \App\Enums\TarefaStatus::from($tarefa['status']);
+                                    $pausada = $this->tarefaPausada($tarefa);
+                                    $emExecucao = $this->tarefaEmExecucao($tarefa['id']);
+                                    $finalizadaLista = in_array($tarefa['status'], [\App\Enums\TarefaStatus::Concluida->value, \App\Enums\TarefaStatus::Cancelada->value], true);
+                                    $canIniciar = ! $finalizadaLista && ! $emExecucao;
+                                    $canPausar = $emExecucao;
+                                    $canParar = ! $finalizadaLista && ($emExecucao || $pausada || ($tarefa['tempo_segundos'] ?? 0) > 0);
+                                    $ultimaPausa = collect($tarefa['pausas'] ?? [])->last();
+                                    $statusTitle = $pausada && $ultimaPausa
+                                        ? 'Pausada em '.\Illuminate\Support\Carbon::parse($ultimaPausa['em'])->format('d/m/Y H:i').': '.$ultimaPausa['motivo']
+                                        : $statusEnum->label();
                                 @endphp
                                 <tr wire:key="tarefa-lista-{{ $tarefa['id'] }}" class="hover:bg-slate-50">
                                     <td class="px-5 py-4">
@@ -879,12 +1117,66 @@ new class extends Component
                                         </span>
                                     </td>
                                     <td class="px-5 py-4">
-                                        <span @class(['inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold', $statusEnum->badgeClass()])>
+                                        <span
+                                            title="{{ $statusTitle }}"
+                                            @class(['inline-flex max-w-[9rem] items-center gap-1.5 truncate rounded-full px-2.5 py-0.5 text-xs font-semibold', $statusEnum->badgeClass()])
+                                        >
                                             {{ $statusEnum->label() }}
+                                            @if ($pausada)
+                                                <x-icon name="pause" class="h-3 w-3 shrink-0 text-amber-600" />
+                                            @elseif ($emExecucao)
+                                                <span class="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-blue-500"></span>
+                                            @endif
                                         </span>
                                     </td>
                                     <td class="px-5 py-4 text-slate-700">
                                         {{ $tarefa['data_vencimento'] ? \Illuminate\Support\Carbon::parse($tarefa['data_vencimento'])->format('d/m/Y') : '—' }}
+                                    </td>
+                                    <td class="px-5 py-4 text-center">
+                                        @if ($canIniciar || $canPausar || $canParar)
+                                            <div class="inline-flex items-center rounded-md border border-slate-200 bg-white p-0.5 shadow-sm">
+                                                @if ($canIniciar)
+                                                    <button
+                                                        type="button"
+                                                        wire:click="iniciarTarefa({{ $tarefa['id'] }})"
+                                                        title="{{ $pausada || $tarefa['status'] === \App\Enums\TarefaStatus::EmAndamento->value ? 'Retomar' : 'Iniciar' }}"
+                                                        class="inline-flex h-7 w-7 items-center justify-center rounded text-emerald-600 hover:bg-emerald-50"
+                                                    >
+                                                        <x-icon name="play" class="h-3.5 w-3.5" />
+                                                    </button>
+                                                @endif
+
+                                                @if ($canPausar)
+                                                    <button
+                                                        type="button"
+                                                        wire:click="solicitarPausa({{ $tarefa['id'] }})"
+                                                        title="Pausar"
+                                                        class="inline-flex h-7 w-7 items-center justify-center rounded text-amber-600 hover:bg-amber-50"
+                                                    >
+                                                        <x-icon name="pause" class="h-3.5 w-3.5" />
+                                                    </button>
+                                                @endif
+
+                                                @if ($canParar)
+                                                    <button
+                                                        type="button"
+                                                        wire:click="solicitarFinalizacao({{ $tarefa['id'] }})"
+                                                        title="Finalizar"
+                                                        class="inline-flex h-7 w-7 items-center justify-center rounded text-red-600 hover:bg-red-50"
+                                                    >
+                                                        <x-icon name="stop" class="h-3.5 w-3.5" />
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <span class="text-xs text-slate-300">—</span>
+                                        @endif
+
+                                        @if (($tarefa['tempo_segundos'] ?? 0) > 0 || $emExecucao)
+                                            <p class="mt-1 font-mono text-[11px] leading-none text-slate-500">
+                                                {{ $this->tempoAtual($tarefa['tempo_segundos'] ?? 0, $tarefa['id']) }}
+                                            </p>
+                                        @endif
                                     </td>
                                     <td class="px-5 py-4">
                                         <div class="flex justify-end gap-2">
@@ -956,7 +1248,7 @@ new class extends Component
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="px-5 py-12 text-center text-slate-600">
+                                    <td colspan="7" class="px-5 py-12 text-center text-slate-600">
                                         @if ($busca || $filtroPrioridade || $filtroResponsavel || $filtroStatus || $filtroVencimento)
                                             Nenhuma tarefa encontrada com os filtros aplicados.
                                         @else
@@ -968,7 +1260,7 @@ new class extends Component
                         </tbody>
                         <tfoot class="border-t border-slate-100 bg-slate-50">
                             <tr>
-                                <td colspan="6" class="px-5 py-3 text-sm text-slate-600">
+                                <td colspan="7" class="px-5 py-3 text-sm text-slate-600">
                                     @if ($busca || $filtroPrioridade || $filtroResponsavel || $filtroStatus || $filtroVencimento)
                                         Exibindo {{ count($tarefasLista) }} de {{ $totalTarefas }} tarefas · {{ $pendentesCount }} em aberto
                                     @else
@@ -1063,6 +1355,9 @@ new class extends Component
             $statusView = \App\Enums\TarefaStatus::from($tarefaView['status']);
             $categoriaView = \App\Enums\TarefaCategoria::from($tarefaView['categoria']);
             $recorrenciaView = \App\Enums\TarefaRecorrencia::from($tarefaView['recorrencia']);
+            $pausadaView = $this->tarefaPausada($tarefaView);
+            $emExecucaoView = $this->tarefaEmExecucao($tarefaView['id']);
+            $finalizadaView = in_array($tarefaView['status'], [\App\Enums\TarefaStatus::Concluida->value, \App\Enums\TarefaStatus::Cancelada->value], true);
         @endphp
         <div
             wire:key="visualizar-tarefa-drawer"
@@ -1113,8 +1408,78 @@ new class extends Component
                     </button>
                 </div>
 
+                @if ($pausadaView)
+                    @php $ultimaPausaView = collect($tarefaView['pausas'] ?? [])->last(); @endphp
+                    <div class="shrink-0 border-b border-amber-200 bg-amber-50 px-6 py-2">
+                        <p class="truncate text-xs font-medium text-amber-900">
+                            <x-icon name="exclamation-triangle" class="mr-1 inline h-4 w-4 text-amber-600" />
+                            Pausada
+                            @if ($ultimaPausaView)
+                                — {{ \Illuminate\Support\Carbon::parse($ultimaPausaView['em'])->format('d/m/Y H:i') }}: {{ $ultimaPausaView['motivo'] }}
+                            @endif
+                        </p>
+                    </div>
+                @endif
+
                 <div class="flex min-h-0 flex-1 flex-col lg:flex-row">
                     <div class="min-h-0 flex-1 overflow-y-auto px-6 py-6 lg:border-r lg:border-slate-100">
+                        @if (! $finalizadaView)
+                            <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                                <div class="flex items-center gap-3">
+                                    <span class="font-mono text-lg font-semibold tabular-nums text-slate-900">
+                                        {{ $this->tempoAtual($tarefaView['tempo_segundos'] ?? 0, $tarefaView['id']) }}
+                                    </span>
+                                    <span class="text-xs text-slate-500">Tempo de execução</span>
+                                </div>
+                                <div class="inline-flex items-center rounded-md border border-slate-200 bg-white p-0.5 shadow-sm">
+                                    @if (! $emExecucaoView && in_array($tarefaView['status'], [\App\Enums\TarefaStatus::Pendente->value, \App\Enums\TarefaStatus::EmAndamento->value], true))
+                                        <button
+                                            type="button"
+                                            wire:click="iniciarTarefa({{ $tarefaView['id'] }})"
+                                            title="{{ $pausadaView || $tarefaView['status'] === \App\Enums\TarefaStatus::EmAndamento->value ? 'Retomar' : 'Iniciar' }}"
+                                            class="inline-flex h-7 w-7 items-center justify-center rounded text-emerald-600 hover:bg-emerald-50"
+                                        >
+                                            <x-icon name="play" class="h-3.5 w-3.5" />
+                                        </button>
+                                    @endif
+
+                                    @if ($emExecucaoView)
+                                        <button
+                                            type="button"
+                                            wire:click="solicitarPausa({{ $tarefaView['id'] }})"
+                                            title="Pausar"
+                                            class="inline-flex h-7 w-7 items-center justify-center rounded text-amber-600 hover:bg-amber-50"
+                                        >
+                                            <x-icon name="pause" class="h-3.5 w-3.5" />
+                                        </button>
+                                    @endif
+
+                                    @if ($emExecucaoView || $pausadaView || ($tarefaView['tempo_segundos'] ?? 0) > 0)
+                                        <button
+                                            type="button"
+                                            wire:click="solicitarFinalizacao({{ $tarefaView['id'] }})"
+                                            title="Finalizar"
+                                            class="inline-flex h-7 w-7 items-center justify-center rounded text-red-600 hover:bg-red-50"
+                                        >
+                                            <x-icon name="stop" class="h-3.5 w-3.5" />
+                                        </button>
+                                    @endif
+                                </div>
+                            </div>
+                        @else
+                            <div class="mb-5 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                                <span class="font-mono text-lg font-semibold tabular-nums text-emerald-900">
+                                    {{ $this->tempoAtual($tarefaView['tempo_segundos'] ?? 0) }}
+                                </span>
+                                <div class="text-xs text-emerald-700">
+                                    Tarefa concluída
+                                    @if ($tarefaView['finalizada_em'] ?? null)
+                                        em {{ \Illuminate\Support\Carbon::parse($tarefaView['finalizada_em'])->format('d/m/Y H:i') }}
+                                    @endif
+                                </div>
+                            </div>
+                        @endif
+
                         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                         <div class="sm:col-span-2">
                             <label class="mb-1 block text-sm font-medium text-gray-700">Título</label>
@@ -1181,14 +1546,6 @@ new class extends Component
                             <label class="mb-1 block text-sm font-medium text-gray-700">Recorrência</label>
                             <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
                                 {{ $recorrenciaView->label() }}
-                            </div>
-                        </div>
-
-                        <div class="sm:col-span-2">
-                            <label class="mb-2 block text-sm font-medium text-gray-700">Tempo gasto</label>
-                            <div class="flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                <span class="font-mono text-2xl font-semibold text-slate-900">{{ $this->tempoAtual($tarefaView['tempo_segundos'], $tarefaView['id']) }}</span>
-                                <span class="text-xs text-slate-600">Tempo total registrado nesta tarefa</span>
                             </div>
                         </div>
 
@@ -1410,6 +1767,97 @@ new class extends Component
                         </div>
                     </form>
                 </div>
+            </div>
+        </div>
+    @endif
+
+    @if ($finalizandoTarefaId)
+        <div
+            wire:key="modal-finalizar-tarefa"
+            class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+        >
+            <button
+                type="button"
+                class="absolute inset-0 bg-slate-900/50 backdrop-blur-[1px]"
+                wire:click="cancelarFinalizacao"
+                aria-label="Fechar"
+            ></button>
+
+            <div class="relative w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-2xl">
+                <div class="mb-4">
+                    <h3 class="text-lg font-semibold text-slate-900">Finalizar tarefa</h3>
+                    <p class="mt-1 text-sm text-slate-500">
+                        Confirme o tempo total antes de marcar a tarefa como concluída.
+                    </p>
+                </div>
+
+                <form wire:submit="confirmarFinalizacao" class="space-y-4">
+                    <x-input
+                        wire:model="finalTempoTotal"
+                        label="Tempo total"
+                        placeholder="00:00:00"
+                        class="font-mono"
+                    />
+                    <p class="text-xs text-slate-500">Formato HH:MM:SS — ajuste se necessário.</p>
+
+                    <div class="flex justify-end gap-3">
+                        <x-button flat label="Cancelar" wire:click="cancelarFinalizacao" type="button" />
+                        <button
+                            type="submit"
+                            class="inline-flex h-10 items-center gap-2 rounded-lg bg-red-500 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-600"
+                        >
+                            <x-icon name="stop" class="h-4 w-4" />
+                            Finalizar tarefa
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
+    @if ($pausandoTarefaId)
+        <div
+            wire:key="modal-pausa-tarefa"
+            class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+        >
+            <button
+                type="button"
+                class="absolute inset-0 bg-slate-900/50 backdrop-blur-[1px]"
+                wire:click="cancelarPausa"
+                aria-label="Fechar"
+            ></button>
+
+            <div class="relative w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-2xl">
+                <div class="mb-4">
+                    <h3 class="text-lg font-semibold text-slate-900">Motivo da pausa</h3>
+                    <p class="mt-1 text-sm text-slate-500">
+                        Informe o motivo da interrupção. A data e hora serão registradas automaticamente.
+                    </p>
+                </div>
+
+                <form wire:submit="confirmarPausa" class="space-y-4">
+                    <x-textarea
+                        wire:model="motivoPausa"
+                        label="Motivo"
+                        placeholder="Ex: Aguardando retorno do cliente, dependência de outra tarefa..."
+                        rows="4"
+                    />
+
+                    <div class="flex justify-end gap-3">
+                        <x-button flat label="Cancelar" wire:click="cancelarPausa" type="button" />
+                        <button
+                            type="submit"
+                            class="inline-flex h-10 items-center gap-2 rounded-lg bg-amber-500 px-4 text-sm font-medium text-white shadow-sm hover:bg-amber-600"
+                        >
+                            <x-icon name="pause" class="h-4 w-4" />
+                            Confirmar pausa
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     @endif

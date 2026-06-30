@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Tarefa;
 use App\Models\TarefaAnexo;
 use App\Models\TarefaComentario;
+use App\Models\TarefaPausa;
 use App\Models\Usuario;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
@@ -15,7 +16,7 @@ class TarefaRepository
     /** @return Builder<Tarefa> */
     public static function query(): Builder
     {
-        return Tarefa::query()->with(['responsavel', 'comentarios', 'anexos']);
+        return Tarefa::query()->with(['responsavel', 'comentarios', 'anexos', 'pausas']);
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -71,6 +72,9 @@ class TarefaRepository
             'categoria' => $data['categoria'],
             'data_inicio' => $data['data_inicio'],
             'tempo_segundos' => (int) ($data['tempo_segundos'] ?? 0),
+            'pausada' => (bool) ($data['pausada'] ?? false),
+            'iniciada_em' => $data['iniciada_em'] ?? null,
+            'finalizada_em' => $data['finalizada_em'] ?? null,
             'recorrencia' => $data['recorrencia'],
         ]);
 
@@ -90,6 +94,9 @@ class TarefaRepository
             'categoria' => $data['categoria'],
             'data_inicio' => $data['data_inicio'],
             'tempo_segundos' => (int) ($data['tempo_segundos'] ?? 0),
+            'pausada' => (bool) ($data['pausada'] ?? false),
+            'iniciada_em' => $data['iniciada_em'] ?? null,
+            'finalizada_em' => $data['finalizada_em'] ?? null,
             'recorrencia' => $data['recorrencia'],
         ]);
     }
@@ -107,6 +114,9 @@ class TarefaRepository
             'categoria' => $tarefa['categoria'],
             'data_inicio' => $tarefa['data_inicio'],
             'tempo_segundos' => (int) ($tarefa['tempo_segundos'] ?? 0),
+            'pausada' => (bool) ($tarefa['pausada'] ?? false),
+            'iniciada_em' => $tarefa['iniciada_em'] ?? null,
+            'finalizada_em' => $tarefa['finalizada_em'] ?? null,
             'recorrencia' => $tarefa['recorrencia'],
         ]);
     }
@@ -163,6 +173,15 @@ class TarefaRepository
         $anexo->delete();
     }
 
+    public static function addPausa(int $tarefaId, string $motivo): TarefaPausa
+    {
+        return TarefaPausa::query()->create([
+            'tarefa_id' => $tarefaId,
+            'motivo' => $motivo,
+            'pausada_em' => now(),
+        ]);
+    }
+
     /** @return array<string, mixed> */
     public static function toArray(Tarefa $tarefa): array
     {
@@ -177,6 +196,9 @@ class TarefaRepository
             'categoria' => $tarefa->categoria->value,
             'data_inicio' => $tarefa->data_inicio?->toDateString(),
             'tempo_segundos' => (int) $tarefa->tempo_segundos,
+            'pausada' => (bool) $tarefa->pausada,
+            'iniciada_em' => $tarefa->iniciada_em?->toDateTimeString(),
+            'finalizada_em' => $tarefa->finalizada_em?->toDateTimeString(),
             'recorrencia' => $tarefa->recorrencia->value,
             'anexos' => $tarefa->anexos->map(fn (TarefaAnexo $anexo) => [
                 'id' => $anexo->id,
@@ -191,6 +213,14 @@ class TarefaRepository
                     'autor' => $comentario->autor,
                     'texto' => $comentario->texto,
                     'criado_em' => $comentario->criado_em->toDateTimeString(),
+                ])
+                ->all(),
+            'pausas' => $tarefa->pausas
+                ->sortBy('pausada_em')
+                ->values()
+                ->map(fn (TarefaPausa $pausa) => [
+                    'motivo' => $pausa->motivo,
+                    'em' => $pausa->pausada_em->toDateTimeString(),
                 ])
                 ->all(),
         ];

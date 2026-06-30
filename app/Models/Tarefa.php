@@ -26,6 +26,9 @@ class Tarefa extends Model
         'categoria',
         'data_inicio',
         'tempo_segundos',
+        'pausada',
+        'iniciada_em',
+        'finalizada_em',
         'recorrencia',
     ];
 
@@ -38,6 +41,9 @@ class Tarefa extends Model
             'recorrencia' => TarefaRecorrencia::class,
             'data_vencimento' => 'date',
             'data_inicio' => 'date',
+            'pausada' => 'boolean',
+            'iniciada_em' => 'datetime',
+            'finalizada_em' => 'datetime',
         ];
     }
 
@@ -54,5 +60,10 @@ class Tarefa extends Model
     public function anexos(): HasMany
     {
         return $this->hasMany(TarefaAnexo::class, 'tarefa_id');
+    }
+
+    public function pausas(): HasMany
+    {
+        return $this->hasMany(TarefaPausa::class, 'tarefa_id');
     }
 }
