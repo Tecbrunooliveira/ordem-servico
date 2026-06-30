@@ -84,7 +84,13 @@ document.addEventListener('alpine:init', () => {
             const next = ! this.open;
             this.open = next;
 
+            this.notificationCenter.unlockAudio();
+
             if (next) {
+                if (this.pushPermission === 'default') {
+                    this.requestPush();
+                }
+
                 this.$wire.abrirPainel();
             }
         },

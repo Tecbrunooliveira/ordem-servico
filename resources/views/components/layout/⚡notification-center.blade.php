@@ -10,19 +10,16 @@ new class extends Component
 
     public int $unreadCount = 0;
 
-    /** @var array<int, string> */
-    public array $snapshotIds = [];
-
-    public bool $initialized = false;
-
     public function mount(): void
     {
-        $this->sync(false);
+        $this->sync();
+        $this->emitirNaoLidas();
     }
 
     public function poll(): void
     {
-        $this->sync(true);
+        $this->sync();
+        $this->emitirNaoLidas();
     }
 
     public function abrirPainel(): void
@@ -33,7 +30,7 @@ new class extends Component
             NotificationCenter::markAllAsRead($userId);
         }
 
-        $this->sync(false);
+        $this->sync();
     }
 
     public function marcarLida(string $id): void
@@ -44,7 +41,7 @@ new class extends Component
             NotificationCenter::markAsRead($userId, $id);
         }
 
-        $this->sync(false);
+        $this->sync();
     }
 
     public function marcarTodasLidas(): void
@@ -55,27 +52,24 @@ new class extends Component
             NotificationCenter::markAllAsRead($userId);
         }
 
-        $this->sync(false);
+        $this->sync();
     }
 
-    private function sync(bool $emitNew): void
+    private function emitirNaoLidas(): void
+    {
+        $unread = array_values(array_filter(
+            $this->items,
+            fn (array $item): bool => ! $item['read'],
+        ));
+
+        if ($unread !== []) {
+            $this->dispatch('notificacoes-novas', items: $unread);
+        }
+    }
+
+    private function sync(): void
     {
         $items = NotificationCenter::all();
-        $currentIds = array_column($items, 'id');
-
-        if ($emitNew && $this->initialized) {
-            $newItems = array_values(array_filter(
-                $items,
-                fn (array $item): bool => ! in_array($item['id'], $this->snapshotIds, true) && ! $item['read'],
-            ));
-
-            if ($newItems !== []) {
-                $this->dispatch('notificacoes-novas', items: $newItems);
-            }
-        }
-
-        $this->snapshotIds = $currentIds;
-        $this->initialized = true;
         $this->items = $items;
         $this->unreadCount = NotificationCenter::unreadCount();
     }
@@ -83,9 +77,11 @@ new class extends Component
 ?>
 
 <div
-    wire:poll.45s="poll"
+    wire:poll.20s="poll"
     x-data="notificationCenterPanel()"
     x-on:keydown.escape.window="open && (open = false)"
+    x-on:notificacoes-novas.window="notificationCenter.handleEvent($event.detail)"
+    @tarefas-updated.window="$wire.poll()"
     class="relative"
 >
     <button
@@ -209,6 +205,13 @@ new class extends Component
                 class="text-xs font-medium text-brand-600 hover:text-brand-700"
             >
                 Permitir notificações do navegador
+            </button>
+            <button
+                type="button"
+                x-on:click="notificationCenter.testAlert()"
+                class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+                Testar som e push
             </button>
         </div>
     </div>

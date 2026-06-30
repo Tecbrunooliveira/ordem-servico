@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'notification-center-prefs';
+const ALERTED_KEY = 'notification-center-alerted';
 
 const DEFAULT_PREFS = {
     sound: true,
@@ -17,7 +18,22 @@ function writePrefs(prefs) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...readPrefs(), ...prefs }));
 }
 
+function readAlertedIds() {
+    try {
+        return JSON.parse(sessionStorage.getItem(ALERTED_KEY) || '[]');
+    } catch {
+        return [];
+    }
+}
+
+function markAlertedIds(ids) {
+    const merged = [...new Set([...readAlertedIds(), ...ids])];
+
+    sessionStorage.setItem(ALERTED_KEY, JSON.stringify(merged));
+}
+
 let audioContext = null;
+let audioUnlocked = false;
 
 function getAudioContext() {
     if (! audioContext) {
@@ -33,7 +49,27 @@ function getAudioContext() {
     return audioContext;
 }
 
-function playTone(frequency, duration = 0.12, volume = 0.08) {
+async function unlockAudio() {
+    const ctx = getAudioContext();
+
+    if (! ctx) {
+        return false;
+    }
+
+    if (ctx.state === 'suspended') {
+        try {
+            await ctx.resume();
+        } catch {
+            return false;
+        }
+    }
+
+    audioUnlocked = true;
+
+    return true;
+}
+
+async function playTone(frequency, duration = 0.14, volume = 0.12) {
     const ctx = getAudioContext();
 
     if (! ctx) {
@@ -41,7 +77,7 @@ function playTone(frequency, duration = 0.12, volume = 0.08) {
     }
 
     if (ctx.state === 'suspended') {
-        ctx.resume().catch(() => {});
+        await unlockAudio();
     }
 
     const oscillator = ctx.createOscillator();
@@ -62,6 +98,26 @@ function playTone(frequency, duration = 0.12, volume = 0.08) {
     oscillator.stop(now + duration);
 }
 
+function extractItemsFromEvent(detail) {
+    if (Array.isArray(detail)) {
+        if (detail[0]?.items) {
+            return detail[0].items;
+        }
+
+        if (detail[0]?.title) {
+            return detail;
+        }
+
+        return detail.items ?? [];
+    }
+
+    if (detail?.items) {
+        return detail.items;
+    }
+
+    return [];
+}
+
 export const NotificationCenterUtil = {
     prefs() {
         return readPrefs();
@@ -71,25 +127,29 @@ export const NotificationCenterUtil = {
         writePrefs(prefs);
     },
 
+    async unlockAudio() {
+        return unlockAudio();
+    },
+
     toggleSound() {
         const prefs = readPrefs();
         prefs.sound = ! prefs.sound;
         writePrefs(prefs);
 
         if (prefs.sound) {
-            this.playSound('info');
+            unlockAudio().then(() => this.playSound('info'));
         }
 
         return prefs.sound;
     },
 
-    togglePush() {
+    async togglePush() {
         const prefs = readPrefs();
         prefs.push = ! prefs.push;
         writePrefs(prefs);
 
         if (prefs.push) {
-            this.requestPushPermission();
+            await this.requestPushPermission();
         }
 
         return prefs.push;
@@ -119,10 +179,12 @@ export const NotificationCenterUtil = {
         return Notification.permission;
     },
 
-    playSound(type = 'info') {
+    async playSound(type = 'info') {
         if (! readPrefs().sound) {
             return;
         }
+
+        await unlockAudio();
 
         const tones = {
             warning: [440, 330],
@@ -133,18 +195,23 @@ export const NotificationCenterUtil = {
 
         const sequence = tones[type] || tones.info;
 
-        sequence.forEach((frequency, index) => {
-            setTimeout(() => playTone(frequency, 0.1, 0.07), index * 130);
-        });
+        for (const [index, frequency] of sequence.entries()) {
+            await new Promise((resolve) => {
+                setTimeout(async () => {
+                    await playTone(frequency, 0.12, 0.1);
+                    resolve();
+                }, index * 140);
+            });
+        }
     },
 
     showPush(notification) {
         if (! readPrefs().push) {
-            return;
+            return false;
         }
 
         if (! ('Notification' in window) || Notification.permission !== 'granted') {
-            return;
+            return false;
         }
 
         const instance = new Notification(notification.title, {
@@ -162,6 +229,8 @@ export const NotificationCenterUtil = {
 
             instance.close();
         };
+
+        return true;
     },
 
     notifyWireui(notification) {
@@ -188,29 +257,61 @@ export const NotificationCenterUtil = {
         }));
     },
 
-    handleNew(items = []) {
+    handleNew(items = [], { force = false } = {}) {
         if (! Array.isArray(items) || items.length === 0) {
             return;
         }
 
-        items.forEach((notification) => {
+        const alerted = new Set(readAlertedIds());
+        const fresh = force
+            ? items
+            : items.filter((notification) => notification?.id && ! alerted.has(notification.id));
+
+        if (fresh.length === 0) {
+            return;
+        }
+
+        fresh.forEach((notification) => {
             this.playSound(notification.type || 'info');
             this.showPush(notification);
             this.notifyWireui(notification);
         });
+
+        markAlertedIds(fresh.map((notification) => notification.id));
+    },
+
+    handleEvent(detail, options = {}) {
+        this.handleNew(extractItemsFromEvent(detail), options);
+    },
+
+    async testAlert() {
+        await unlockAudio();
+        await this.requestPushPermission();
+
+        const sample = {
+            id: `teste-${Date.now()}`,
+            type: 'info',
+            title: 'Teste de notificação',
+            message: 'Som, push e toast estão funcionando.',
+            url: window.location.href,
+        };
+
+        this.handleNew([sample], { force: true });
+    },
+
+    bindWindowEvents() {
+        window.addEventListener('notificacoes-novas', (event) => {
+            this.handleEvent(event.detail);
+        });
     },
 
     init() {
-        document.addEventListener('livewire:init', () => {
-            Livewire.on('notificacoes-novas', (payload) => {
-                const items = payload?.items ?? payload?.[0]?.items ?? [];
+        this.bindWindowEvents();
 
-                this.handleNew(items);
-            });
+        ['click', 'keydown', 'touchstart'].forEach((eventName) => {
+            document.addEventListener(eventName, () => {
+                unlockAudio();
+            }, { once: true, passive: true });
         });
-
-        document.addEventListener('click', () => {
-            getAudioContext()?.resume?.().catch(() => {});
-        }, { once: true });
     },
 };
