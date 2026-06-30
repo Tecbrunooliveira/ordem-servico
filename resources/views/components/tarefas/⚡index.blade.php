@@ -1396,7 +1396,7 @@ new class extends Component
                 x-transition:leave="transform transition ease-in duration-200"
                 x-transition:leave-start="translate-x-0"
                 x-transition:leave-end="translate-x-full"
-                class="absolute inset-y-0 right-0 flex w-full flex-col border-l border-slate-200 bg-white shadow-2xl lg:w-[calc(100%-16rem)]"
+                class="absolute inset-y-0 right-0 flex h-full w-full flex-col border-l border-slate-200 bg-white shadow-2xl lg:w-[calc(100%-16rem)]"
             >
                 <div class="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
                     <div class="min-w-0">
@@ -1425,162 +1425,137 @@ new class extends Component
                     </div>
                 @endif
 
-                <div class="flex min-h-0 flex-1 flex-col lg:flex-row">
+                <div class="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
                     {{-- Detalhes da tarefa (esquerda) --}}
-                    <div class="min-h-0 w-full overflow-y-auto px-6 py-6 lg:w-1/2 lg:border-r lg:border-slate-100">
-                        @if ($cronometroDisponivel && ! $finalizadaView)
-                            <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                                <div class="flex items-center gap-3">
-                                    <span class="font-mono text-lg font-semibold tabular-nums text-slate-900">
-                                        {{ $this->tempoAtual($tarefaView['tempo_segundos'] ?? 0, $tarefaView['id']) }}
-                                    </span>
-                                    <span class="text-xs text-slate-500">Tempo de execução</span>
-                                </div>
-                                <div class="inline-flex items-center rounded-md border border-slate-200 bg-white p-0.5 shadow-sm">
-                                    @if (! $emExecucaoView && in_array($tarefaView['status'], [\App\Enums\TarefaStatus::Pendente->value, \App\Enums\TarefaStatus::EmAndamento->value], true))
-                                        <button
-                                            type="button"
-                                            wire:click="iniciarTarefa({{ $tarefaView['id'] }})"
-                                            title="{{ $pausadaView || $tarefaView['status'] === \App\Enums\TarefaStatus::EmAndamento->value ? 'Retomar' : 'Iniciar' }}"
-                                            class="inline-flex h-7 w-7 items-center justify-center rounded text-emerald-600 hover:bg-emerald-50"
-                                        >
-                                            <x-icon name="play" class="h-3.5 w-3.5" />
-                                        </button>
-                                    @endif
-
-                                    @if ($emExecucaoView)
-                                        <button
-                                            type="button"
-                                            wire:click="solicitarPausa({{ $tarefaView['id'] }})"
-                                            title="Pausar"
-                                            class="inline-flex h-7 w-7 items-center justify-center rounded text-amber-600 hover:bg-amber-50"
-                                        >
-                                            <x-icon name="pause" class="h-3.5 w-3.5" />
-                                        </button>
-                                    @endif
-
-                                    @if ($emExecucaoView || $pausadaView || ($tarefaView['tempo_segundos'] ?? 0) > 0)
-                                        <button
-                                            type="button"
-                                            wire:click="solicitarFinalizacao({{ $tarefaView['id'] }})"
-                                            title="Finalizar"
-                                            class="inline-flex h-7 w-7 items-center justify-center rounded text-red-600 hover:bg-red-50"
-                                        >
-                                            <x-icon name="stop" class="h-3.5 w-3.5" />
-                                        </button>
-                                    @endif
-                                </div>
-                            </div>
-                        @elseif ($cronometroDisponivel && $finalizadaView)
-                            <div class="mb-5 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-                                <span class="font-mono text-lg font-semibold tabular-nums text-emerald-900">
-                                    {{ $this->tempoAtual($tarefaView['tempo_segundos'] ?? 0) }}
-                                </span>
-                                <div class="text-xs text-emerald-700">
-                                    Tarefa concluída
-                                    @if ($tarefaView['finalizada_em'] ?? null)
-                                        em {{ \Illuminate\Support\Carbon::parse($tarefaView['finalizada_em'])->format('d/m/Y H:i') }}
-                                    @endif
-                                </div>
-                            </div>
-                        @endif
-
-                        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                            <div class="sm:col-span-2">
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Título</label>
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
-                                    {{ $tarefaView['titulo'] }}
-                                </div>
-                            </div>
-
-                            <div class="sm:col-span-2">
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Descrição</label>
-                                <div class="min-h-[5rem] rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm whitespace-pre-wrap text-slate-900">
-                                    {{ $tarefaView['descricao'] ?: '—' }}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Status</label>
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                                    <span @class(['inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold', $statusView->badgeClass()])>
-                                        {{ $statusView->label() }}
-                                    </span>
-                                    @if ($pausadaView)
-                                        <span class="ml-2 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-300">Pausada</span>
-                                    @endif
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Prioridade</label>
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                                    <span class="inline-flex items-center gap-1.5 text-sm font-medium" style="color: {{ $prioridadeView->color() }}">
-                                        <span class="h-2 w-2 rounded-full" style="background-color: {{ $prioridadeView->color() }}"></span>
-                                        {{ $prioridadeView->label() }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Data vencimento</label>
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
-                                    {{ $tarefaView['data_vencimento'] ? \Illuminate\Support\Carbon::parse($tarefaView['data_vencimento'])->format('d/m/Y') : '—' }}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Responsável</label>
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
-                                    {{ $tarefaView['responsavel'] }}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Categoria</label>
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
-                                    {{ $categoriaView->label() }}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Data início</label>
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
-                                    {{ $tarefaView['data_inicio'] ? \Illuminate\Support\Carbon::parse($tarefaView['data_inicio'])->format('d/m/Y') : '—' }}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="mb-1 block text-sm font-medium text-gray-700">Recorrência</label>
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900">
-                                    {{ $recorrenciaView->label() }}
-                                </div>
-                            </div>
-
-                            <div class="sm:col-span-2">
-                                <label class="mb-2 block text-sm font-medium text-gray-700">Anexos</label>
-                                <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
-                                    @if (count($tarefaView['anexos'] ?? []))
-                                        <ul class="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
-                                            @foreach ($tarefaView['anexos'] as $anexo)
-                                                <li class="flex items-center gap-3 px-4 py-3 text-sm">
-                                                    <x-icon name="paper-clip" class="h-4 w-4 shrink-0 text-slate-400" />
-                                                    <span class="truncate text-slate-700">{{ $anexo['nome'] }}</span>
-                                                    <span class="shrink-0 text-xs text-slate-400">({{ $anexo['tamanho'] }})</span>
-                                                </li>
-                                            @endforeach
-                                        </ul>
-                                    @else
-                                        <p class="text-sm text-slate-500">Nenhum anexo vinculado a esta tarefa.</p>
-                                    @endif
-                                </div>
-                            </div>
+                    <section class="flex min-h-0 flex-1 flex-col overflow-hidden border-b border-slate-100 lg:w-1/2 lg:flex-none lg:border-b-0 lg:border-r">
+                        <div class="shrink-0 border-b border-slate-100 bg-white px-6 py-3">
+                            <h3 class="text-sm font-semibold text-slate-900">Detalhes da tarefa</h3>
                         </div>
 
-                        @if (! empty($tarefaView['pausas']))
-                            <div class="mt-6 space-y-3 border-t border-slate-100 pt-6">
-                                <h3 class="text-sm font-semibold text-slate-900">Histórico de pausas</h3>
-                                <div class="space-y-2">
+                        <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+                            @if ($cronometroDisponivel && ! $finalizadaView)
+                                <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <span class="font-mono text-lg font-semibold tabular-nums text-slate-900">
+                                            {{ $this->tempoAtual($tarefaView['tempo_segundos'] ?? 0, $tarefaView['id']) }}
+                                        </span>
+                                        <span class="text-xs text-slate-500">Tempo de execução</span>
+                                    </div>
+                                    <div class="inline-flex items-center rounded-md border border-slate-200 bg-white p-0.5 shadow-sm">
+                                        @if (! $emExecucaoView && in_array($tarefaView['status'], [\App\Enums\TarefaStatus::Pendente->value, \App\Enums\TarefaStatus::EmAndamento->value], true))
+                                            <button
+                                                type="button"
+                                                wire:click="iniciarTarefa({{ $tarefaView['id'] }})"
+                                                title="{{ $pausadaView || $tarefaView['status'] === \App\Enums\TarefaStatus::EmAndamento->value ? 'Retomar' : 'Iniciar' }}"
+                                                class="inline-flex h-7 w-7 items-center justify-center rounded text-emerald-600 hover:bg-emerald-50"
+                                            >
+                                                <x-icon name="play" class="h-3.5 w-3.5" />
+                                            </button>
+                                        @endif
+
+                                        @if ($emExecucaoView)
+                                            <button
+                                                type="button"
+                                                wire:click="solicitarPausa({{ $tarefaView['id'] }})"
+                                                title="Pausar"
+                                                class="inline-flex h-7 w-7 items-center justify-center rounded text-amber-600 hover:bg-amber-50"
+                                            >
+                                                <x-icon name="pause" class="h-3.5 w-3.5" />
+                                            </button>
+                                        @endif
+
+                                        @if ($emExecucaoView || $pausadaView || ($tarefaView['tempo_segundos'] ?? 0) > 0)
+                                            <button
+                                                type="button"
+                                                wire:click="solicitarFinalizacao({{ $tarefaView['id'] }})"
+                                                title="Finalizar"
+                                                class="inline-flex h-7 w-7 items-center justify-center rounded text-red-600 hover:bg-red-50"
+                                            >
+                                                <x-icon name="stop" class="h-3.5 w-3.5" />
+                                            </button>
+                                        @endif
+                                    </div>
+                                </div>
+                            @elseif ($cronometroDisponivel && $finalizadaView)
+                                <div class="mb-4 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                                    <span class="font-mono text-lg font-semibold tabular-nums text-emerald-900">
+                                        {{ $this->tempoAtual($tarefaView['tempo_segundos'] ?? 0) }}
+                                    </span>
+                                    <div class="text-xs text-emerald-700">
+                                        Tarefa concluída
+                                        @if ($tarefaView['finalizada_em'] ?? null)
+                                            em {{ \Illuminate\Support\Carbon::parse($tarefaView['finalizada_em'])->format('d/m/Y H:i') }}
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
+
+                            <div class="mb-4 flex flex-wrap items-center gap-2">
+                                <span @class(['inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold', $statusView->badgeClass()])>
+                                    {{ $statusView->label() }}
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                                    <span class="h-2 w-2 rounded-full" style="background-color: {{ $prioridadeView->color() }}"></span>
+                                    {{ $prioridadeView->label() }}
+                                </span>
+                                <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                                    {{ $categoriaView->label() }}
+                                </span>
+                                @if ($pausadaView)
+                                    <span class="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-300">Pausada</span>
+                                @endif
+                            </div>
+
+                            @if (filled($tarefaView['descricao']))
+                                <div class="mb-5">
+                                    <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Descrição</h4>
+                                    <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm whitespace-pre-wrap text-slate-800">
+                                        {{ $tarefaView['descricao'] }}
+                                    </div>
+                                </div>
+                            @endif
+
+                            <dl class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+                                    <dt class="text-xs font-medium text-slate-500">Responsável</dt>
+                                    <dd class="mt-0.5 text-sm font-medium text-slate-900">{{ $tarefaView['responsavel'] }}</dd>
+                                </div>
+                                <div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+                                    <dt class="text-xs font-medium text-slate-500">Vencimento</dt>
+                                    <dd class="mt-0.5 text-sm font-medium text-slate-900">
+                                        {{ $tarefaView['data_vencimento'] ? \Illuminate\Support\Carbon::parse($tarefaView['data_vencimento'])->format('d/m/Y') : '—' }}
+                                    </dd>
+                                </div>
+                                <div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+                                    <dt class="text-xs font-medium text-slate-500">Data início</dt>
+                                    <dd class="mt-0.5 text-sm font-medium text-slate-900">
+                                        {{ $tarefaView['data_inicio'] ? \Illuminate\Support\Carbon::parse($tarefaView['data_inicio'])->format('d/m/Y') : '—' }}
+                                    </dd>
+                                </div>
+                                <div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+                                    <dt class="text-xs font-medium text-slate-500">Recorrência</dt>
+                                    <dd class="mt-0.5 text-sm font-medium text-slate-900">{{ $recorrenciaView->label() }}</dd>
+                                </div>
+                            </dl>
+
+                            @if (count($tarefaView['anexos'] ?? []))
+                                <div class="mt-5">
+                                    <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Anexos</h4>
+                                    <ul class="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+                                        @foreach ($tarefaView['anexos'] as $anexo)
+                                            <li class="flex items-center gap-3 px-3 py-2.5 text-sm">
+                                                <x-icon name="paper-clip" class="h-4 w-4 shrink-0 text-slate-400" />
+                                                <span class="truncate text-slate-700">{{ $anexo['nome'] }}</span>
+                                                <span class="shrink-0 text-xs text-slate-400">({{ $anexo['tamanho'] }})</span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+
+                            @if (! empty($tarefaView['pausas']))
+                                <div class="mt-5 space-y-2">
+                                    <h4 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Histórico de pausas</h4>
                                     @foreach (array_reverse($tarefaView['pausas']) as $pausa)
                                         <div class="rounded-lg border border-amber-100 bg-amber-50/60 px-3 py-2.5">
                                             <p class="text-xs font-medium text-amber-800">
@@ -1590,13 +1565,13 @@ new class extends Component
                                         </div>
                                     @endforeach
                                 </div>
-                            </div>
-                        @endif
-                    </div>
+                            @endif
+                        </div>
+                    </section>
 
                     {{-- Comentários (direita) --}}
-                    <div class="flex min-h-0 w-full flex-col border-t border-slate-100 bg-slate-50/50 lg:w-1/2 lg:border-t-0">
-                        <div class="shrink-0 border-b border-slate-100 px-6 py-4">
+                    <section class="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50/50 lg:w-1/2 lg:flex-none">
+                        <div class="shrink-0 border-b border-slate-100 bg-white px-6 py-3">
                             <h3 class="text-sm font-semibold text-slate-900">Comentários</h3>
                             <p class="text-xs text-slate-500">{{ count($comentariosView) }} {{ count($comentariosView) === 1 ? 'comentário' : 'comentários' }}</p>
                         </div>
@@ -1604,21 +1579,19 @@ new class extends Component
                         <div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
                             @forelse (array_reverse($comentariosView) as $comentario)
                                 <article wire:key="comentario-{{ $comentario['id'] }}" class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                                    <div class="mb-2 flex items-start justify-between gap-3">
-                                        <div class="flex items-center gap-2">
-                                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
-                                                {{ strtoupper(substr($comentario['autor'], 0, 1).substr(strstr($comentario['autor'], ' ') ?: '', 1, 1)) }}
-                                            </span>
-                                            <div>
-                                                <p class="text-sm font-medium text-slate-900">{{ $comentario['autor'] }}</p>
-                                                <p class="text-xs text-slate-500">{{ \Illuminate\Support\Carbon::parse($comentario['criado_em'])->format('d/m/Y H:i') }}</p>
-                                            </div>
+                                    <div class="mb-2 flex items-start gap-3">
+                                        <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
+                                            {{ strtoupper(substr($comentario['autor'], 0, 1).substr(strstr($comentario['autor'], ' ') ?: '', 1, 1)) }}
+                                        </span>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-sm font-medium text-slate-900">{{ $comentario['autor'] }}</p>
+                                            <p class="text-xs text-slate-500">{{ \Illuminate\Support\Carbon::parse($comentario['criado_em'])->format('d/m/Y H:i') }}</p>
+                                            <p class="mt-2 text-sm whitespace-pre-wrap text-slate-700">{{ $comentario['texto'] }}</p>
                                         </div>
                                     </div>
-                                    <p class="text-sm whitespace-pre-wrap text-slate-700">{{ $comentario['texto'] }}</p>
                                 </article>
                             @empty
-                                <div class="flex h-full min-h-[12rem] flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-8 text-center">
+                                <div class="flex min-h-[10rem] flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-8 text-center">
                                     <x-icon name="chat-bubble-left-right" class="mb-3 h-8 w-8 text-slate-300" />
                                     <p class="text-sm font-medium text-slate-600">Nenhum comentário ainda</p>
                                     <p class="mt-1 text-xs text-slate-500">Seja o primeiro a registrar uma observação sobre esta tarefa.</p>
@@ -1639,7 +1612,7 @@ new class extends Component
                                 </div>
                             </form>
                         </div>
-                    </div>
+                    </section>
                 </div>
 
                 <div class="flex shrink-0 justify-end gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
