@@ -745,17 +745,6 @@ new class extends Component
             ->all();
     }
 
-    public function tempoFormAtual(): string
-    {
-        $total = $this->formTempoSegundos;
-
-        if ($this->timerRunning && $this->timerStartedAt) {
-            $total += now()->timestamp - $this->timerStartedAt;
-        }
-
-        return $this->formatTempo($total);
-    }
-
     private function parseTempo(string $tempo): ?int
     {
         if (! preg_match('/^(\d{1,2}):(\d{2}):(\d{2})$/', trim($tempo), $partes)) {
