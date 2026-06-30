@@ -68,6 +68,228 @@ document.addEventListener('livewire:init', () => {
 });
 
 document.addEventListener('alpine:init', () => {
+    Alpine.data('cnpjLookupField', ({ wireModel, applyMethod, variant = 'cliente', autoFetch = true }) => ({
+        buscandoCnpj: false,
+        ultimoCnpjConsultado: '',
+        cnpjTimer: null,
+        wireModel,
+        applyMethod,
+        variant,
+        autoFetch,
+
+        formatCnpj(digits) {
+            digits = (digits || '').replace(/\D/g, '');
+
+            if (digits.length !== 14) {
+                return digits;
+            }
+
+            return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+        },
+
+        formatCep(cep) {
+            cep = (cep || '').replace(/\D/g, '');
+
+            if (cep.length !== 8) {
+                return cep;
+            }
+
+            return cep.replace(/^(\d{5})(\d{3})$/, '$1-$2');
+        },
+
+        formatPhone(phone) {
+            if (! phone) {
+                return '';
+            }
+
+            const area = String(phone.area || '').replace(/\D/g, '');
+            const number = String(phone.number || '').replace(/\D/g, '');
+
+            if (! area || ! number) {
+                return '';
+            }
+
+            if (number.length === 9) {
+                return `(${area}) ${number.slice(0, 5)}-${number.slice(5)}`;
+            }
+
+            if (number.length === 8) {
+                return `(${area}) ${number.slice(0, 4)}-${number.slice(4)}`;
+            }
+
+            return `(${area}) ${number}`;
+        },
+
+        mapClienteResponse(data) {
+            const address = data?.address || {};
+            const company = data?.company || {};
+            const phones = Array.isArray(data?.phones) ? data.phones : [];
+            const emails = Array.isArray(data?.emails) ? data.emails : [];
+            const digits = String(data?.taxId || '').replace(/\D/g, '');
+
+            return {
+                nome: String(company.name || data?.alias || ''),
+                documento: this.formatCnpj(digits),
+                email: String(emails[0]?.address || ''),
+                telefone: this.formatPhone(phones[0]),
+                cidade: String(address.city || ''),
+                estado: String(address.state || ''),
+                rua: String(address.street || ''),
+                numero: String(address.number || ''),
+                bairro: String(address.district || ''),
+            };
+        },
+
+        mapEmpresaResponse(data) {
+            const address = data?.address || {};
+            const company = data?.company || {};
+            const phones = Array.isArray(data?.phones) ? data.phones : [];
+            const emails = Array.isArray(data?.emails) ? data.emails : [];
+            const digits = String(data?.taxId || '').replace(/\D/g, '');
+            const rua = String(address.street || '');
+            const numero = String(address.number || '');
+            const bairro = String(address.district || '');
+
+            const endereco = [rua, numero ? `nº ${numero}` : '', bairro].filter(Boolean).join(', ');
+
+            return {
+                cnpj: this.formatCnpj(digits),
+                razao_social: String(company.name || data?.alias || ''),
+                nome_empresa: String(data?.alias || company.name || ''),
+                email: String(emails[0]?.address || ''),
+                telefone: this.formatPhone(phones[0]),
+                endereco,
+                cidade: String(address.city || ''),
+                estado: String(address.state || ''),
+                cep: this.formatCep(String(address.zip || '')),
+            };
+        },
+
+        mapResponse(data) {
+            return this.variant === 'empresa'
+                ? this.mapEmpresaResponse(data)
+                : this.mapClienteResponse(data);
+        },
+
+        notificar(titulo, descricao) {
+            const payload = {
+                options: {
+                    title: titulo,
+                    description: descricao,
+                    timeout: 3000,
+                },
+            };
+
+            if (window.Livewire?.dispatch) {
+                window.Livewire.dispatch('wireui:notification', payload);
+
+                return;
+            }
+
+            window.dispatchEvent(new CustomEvent('wireui:notification', {
+                bubbles: true,
+                detail: payload,
+            }));
+        },
+
+        valorAtual() {
+            const input = this.$el.querySelector('input');
+
+            return (input?.value || this.$wire.get(this.wireModel) || '').replace(/\D/g, '');
+        },
+
+        async aplicarNoFormulario(mapped) {
+            await this.$wire.call(this.applyMethod, mapped);
+        },
+
+        async buscarCnpj(forcar = false) {
+            if (this.buscandoCnpj) {
+                return;
+            }
+
+            const digits = this.valorAtual();
+
+            if (digits.length !== 14) {
+                this.notificar('CNPJ inválido', 'Informe um CNPJ válido com 14 dígitos.');
+
+                return;
+            }
+
+            if (! forcar && digits === this.ultimoCnpjConsultado) {
+                return;
+            }
+
+            this.buscandoCnpj = true;
+
+            try {
+                const response = await fetch(`https://open.cnpja.com/office/${digits}`);
+
+                if (response.status === 404) {
+                    this.notificar('CNPJ não encontrado', 'CNPJ não encontrado na base da Receita Federal.');
+
+                    return;
+                }
+
+                if (response.status === 429) {
+                    this.notificar('Limite excedido', 'Limite de consultas excedido. Aguarde um minuto e tente novamente.');
+
+                    return;
+                }
+
+                if (! response.ok) {
+                    throw new Error('consulta_falhou');
+                }
+
+                const data = await response.json();
+                const mapped = this.mapResponse(data);
+
+                this.ultimoCnpjConsultado = digits;
+
+                try {
+                    await this.aplicarNoFormulario(mapped);
+                    this.notificar('CNPJ encontrado', 'Dados preenchidos automaticamente.');
+                } catch {
+                    this.notificar('Erro ao preencher', 'Não foi possível aplicar os dados do CNPJ.');
+                }
+            } catch {
+                this.notificar(
+                    'Consulta indisponível',
+                    'Não foi possível consultar o CNPJ. Verifique sua conexão e tente novamente.',
+                );
+            } finally {
+                this.buscandoCnpj = false;
+            }
+        },
+
+        init() {
+            if (! this.autoFetch) {
+                return;
+            }
+
+            const input = this.$el.querySelector('input');
+
+            if (! input) {
+                return;
+            }
+
+            input.addEventListener('input', () => {
+                if (this.buscandoCnpj) {
+                    return;
+                }
+
+                clearTimeout(this.cnpjTimer);
+
+                this.cnpjTimer = setTimeout(() => {
+                    const digits = (input.value || '').replace(/\D/g, '');
+
+                    if (digits.length === 14 && digits !== this.ultimoCnpjConsultado) {
+                        this.buscarCnpj();
+                    }
+                }, 500);
+            });
+        },
+    }));
+
     Alpine.data('tableRowMenu', () => ({
         open: false,
         menuStyle: '',

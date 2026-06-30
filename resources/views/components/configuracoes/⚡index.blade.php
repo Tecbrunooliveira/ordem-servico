@@ -202,20 +202,22 @@ new class extends Component
                 <div class="lg:col-span-2">
                     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                         <div class="sm:col-span-2">
+                            <x-maskable
+                                wire:model="cnpj"
+                                label="CNPJ"
+                                mask="##.###.###/####-##"
+                                emit-formatted
+                                placeholder="00.000.000/0001-00"
+                            />
+                        </div>
+
+                        <div class="sm:col-span-2">
                             <x-input wire:model="nome_empresa" label="Nome da empresa" placeholder="Ex: Gestão Técnica" />
                         </div>
 
                         <div class="sm:col-span-2">
                             <x-input wire:model="razao_social" label="Razão social" placeholder="Ex: Gestão Técnica Serviços Ltda" />
                         </div>
-
-                        <x-maskable
-                            wire:model="cnpj"
-                            label="CNPJ"
-                            mask="##.###.###/####-##"
-                            emit-formatted
-                            placeholder="00.000.000/0001-00"
-                        />
 
                         <x-phone
                             wire:model="telefone"
