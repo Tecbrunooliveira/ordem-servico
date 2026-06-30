@@ -655,4 +655,173 @@ document.addEventListener('alpine:init', () => {
             this.sync();
         },
     }));
+
+    Alpine.data('richMediaEditor', (content, uploadUrl) => ({
+        content,
+        uploadUrl: uploadUrl || '',
+        uploading: false,
+
+        init() {
+            this.$nextTick(() => {
+                if (this.$refs.editor) {
+                    this.$refs.editor.innerHTML = this.content || '';
+                }
+            });
+
+            this.$watch('content', (value) => {
+                if (! this.$refs.editor) {
+                    return;
+                }
+
+                const normalized = value || '';
+
+                if (this.$refs.editor.innerHTML !== normalized) {
+                    this.$refs.editor.innerHTML = normalized;
+                }
+            });
+        },
+
+        sync() {
+            if (! this.$refs.editor) {
+                return;
+            }
+
+            const html = this.$refs.editor.innerHTML;
+            this.content = html === '<br>' ? '' : html;
+        },
+
+        exec(command) {
+            if (! this.$refs.editor) {
+                return;
+            }
+
+            this.$refs.editor.focus();
+            document.execCommand(command, false, null);
+            this.sync();
+        },
+
+        insertHtml(html) {
+            if (! this.$refs.editor) {
+                return;
+            }
+
+            this.$refs.editor.focus();
+            document.execCommand('insertHTML', false, html);
+            this.sync();
+        },
+
+        async uploadFile(file) {
+            if (! file || ! this.uploadUrl) {
+                return null;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+            this.uploading = true;
+
+            try {
+                const response = await fetch(this.uploadUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': token,
+                        Accept: 'application/json',
+                    },
+                    body: formData,
+                    credentials: 'same-origin',
+                });
+
+                if (! response.ok) {
+                    throw new Error('upload failed');
+                }
+
+                return await response.json();
+            } finally {
+                this.uploading = false;
+            }
+        },
+
+        triggerImageUpload() {
+            this.$refs.imageInput?.click();
+        },
+
+        async onImageSelected(event) {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+
+            if (! file) {
+                return;
+            }
+
+            try {
+                const data = await this.uploadFile(file);
+
+                if (data?.url) {
+                    this.insertHtml(`<img src="${data.url}" alt="Imagem" class="repositorio-media repositorio-media--image">`);
+                }
+            } catch (error) {
+                window.alert('Não foi possível enviar a imagem.');
+            }
+        },
+
+        triggerVideoUpload() {
+            this.$refs.videoInput?.click();
+        },
+
+        async onVideoSelected(event) {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+
+            if (! file) {
+                return;
+            }
+
+            try {
+                const data = await this.uploadFile(file);
+
+                if (data?.url) {
+                    this.insertHtml(`<video controls class="repositorio-media repositorio-media--video"><source src="${data.url}"></video>`);
+                }
+            } catch (error) {
+                window.alert('Não foi possível enviar o vídeo.');
+            }
+        },
+
+        insertVideoUrl() {
+            const url = window.prompt('Cole o link do vídeo (YouTube, Vimeo ou arquivo MP4):');
+
+            if (! url?.trim()) {
+                return;
+            }
+
+            const embed = this.buildVideoEmbed(url.trim());
+
+            if (embed) {
+                this.insertHtml(embed);
+            } else {
+                window.alert('Link de vídeo inválido.');
+            }
+        },
+
+        buildVideoEmbed(url) {
+            const youtubeMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/);
+
+            if (youtubeMatch) {
+                return `<div class="repositorio-media repositorio-media--embed"><iframe src="https://www.youtube.com/embed/${youtubeMatch[1]}" frameborder="0" allowfullscreen loading="lazy"></iframe></div>`;
+            }
+
+            const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+
+            if (vimeoMatch) {
+                return `<div class="repositorio-media repositorio-media--embed"><iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}" frameborder="0" allowfullscreen loading="lazy"></iframe></div>`;
+            }
+
+            if (/\.(mp4|webm|mov)(\?.*)?$/i.test(url)) {
+                return `<video controls class="repositorio-media repositorio-media--video"><source src="${url}"></video>`;
+            }
+
+            return null;
+        },
+    }));
 });

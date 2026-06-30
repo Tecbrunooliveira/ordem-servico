@@ -28,4 +28,8 @@ Route::middleware('auth')->group(function (): void {
         ->name('configuracoes.empresa.logo');
     Route::view('/tecnicos', 'tecnicos')->name('tecnicos.index');
     Route::view('/usuarios', 'usuarios')->name('usuarios.index');
+    Route::view('/sistemas', 'sistemas')->name('sistemas.index');
+    Route::view('/repositorio', 'repositorio')->name('repositorio.index');
+    Route::post('/repositorio/midia', [\App\Http\Controllers\RepositorioMidiaController::class, 'store'])
+        ->name('repositorio.midia');
 });

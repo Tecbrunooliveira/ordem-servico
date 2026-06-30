@@ -674,6 +674,32 @@ main .text-gray-500 {
     font-weight: 600;
 }
 
+.repositorio-rich-content img,
+.repositorio-rich-content video {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0.75rem 0;
+    border-radius: 0.5rem;
+}
+
+.repositorio-rich-content .repositorio-media--embed {
+    position: relative;
+    margin: 0.75rem 0;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 0.5rem;
+    background-color: #0f172a;
+}
+
+.repositorio-rich-content .repositorio-media--embed iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
 @keyframes login-float {
     0%,
     100% {

@@ -21,6 +21,7 @@ return [
             'items' => [
                 ['label' => 'Clientes', 'route' => 'clientes.index', 'icon' => 'building-office-2', 'permission' => 'clientes.view'],
                 ['label' => 'Usuários', 'route' => 'usuarios.index', 'icon' => 'identification', 'permission' => 'usuarios.view'],
+                ['label' => 'Sistemas', 'route' => 'sistemas.index', 'icon' => 'cpu-chip', 'permission' => 'sistemas.view'],
             ],
         ],
         [
@@ -29,6 +30,7 @@ return [
                 ['label' => 'Agenda', 'route' => 'agenda.index', 'icon' => 'calendar-days', 'permission' => 'agenda.view'],
                 ['label' => 'Tarefas', 'route' => 'tarefas.index', 'icon' => 'clipboard-document-check', 'permission' => 'tarefas.view'],
                 ['label' => 'Ordem Serviço', 'route' => 'ordens-servico.index', 'icon' => 'wrench-screwdriver', 'permission' => 'ordem-servico.view'],
+                ['label' => 'Repositório', 'route' => 'repositorio.index', 'icon' => 'archive-box', 'permission' => 'repositorio.view'],
             ],
         ],
         // [

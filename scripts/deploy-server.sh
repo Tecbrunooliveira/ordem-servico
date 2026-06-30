@@ -52,6 +52,7 @@ else
 fi
 
 mkdir -p storage/app/public/empresa
+mkdir -p storage/app/public/repositorio
 chmod -R ug+rwx storage bootstrap/cache 2>/dev/null || true
 
 echo "==> Deploy concluído."
