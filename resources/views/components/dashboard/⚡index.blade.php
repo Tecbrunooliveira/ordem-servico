@@ -41,14 +41,14 @@ new class extends Component
             </div>
             <div class="divide-y divide-slate-100">
                 @forelse ($agenda as $item)
-                    <div class="flex gap-4 px-5 py-4">
+                    <div class="flex min-w-0 gap-4 px-4 py-4 sm:px-5">
                         <div class="shrink-0 text-center">
                             <span class="text-sm font-bold text-brand-600">{{ $item['time'] }}</span>
                         </div>
                         <div class="min-w-0 flex-1">
-                            <p class="text-sm font-medium text-slate-900">{{ $item['title'] }}</p>
-                            <p class="text-xs text-slate-500">{{ $item['description'] }}</p>
-                            <div class="mt-2 flex flex-wrap gap-3 text-xs text-slate-400">
+                            <p class="break-words text-sm font-medium text-slate-900">{{ $item['title'] }}</p>
+                            <p class="break-words text-xs text-slate-500">{{ $item['description'] }}</p>
+                            <div class="mt-2 flex flex-col gap-1.5 text-xs text-slate-400 sm:flex-row sm:flex-wrap sm:gap-3">
                                 <span class="inline-flex items-center gap-1">
                                     <x-icon name="user" class="h-3.5 w-3.5" />
                                     {{ $item['person'] }}

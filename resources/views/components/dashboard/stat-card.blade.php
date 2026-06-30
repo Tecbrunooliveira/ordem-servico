@@ -8,7 +8,7 @@
     'iconColor' => 'text-blue-600',
 ])
 
-<div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+<div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5">
     <div class="flex items-start justify-between">
         <div>
             <p class="text-3xl font-bold text-slate-900">{{ $value }}</p>

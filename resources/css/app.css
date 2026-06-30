@@ -304,6 +304,13 @@
     #app-layout-shell {
         display: flex;
         min-height: 100vh;
+        width: 100%;
+    }
+
+    #app-layout-sidebar-host {
+        width: auto;
+        flex-shrink: 0;
+        overflow: hidden;
     }
 
     #app-sidebar {
@@ -318,7 +325,35 @@
     #app-layout-main {
         flex: 1 1 0%;
         min-width: 0;
+        width: auto;
+    }
+}
+
+@media (max-width: 63.999rem) {
+    #app-layout-shell {
+        display: block;
         width: 100%;
+        max-width: 100%;
+    }
+
+    #app-layout-sidebar-host {
+        width: 0;
+        height: 0;
+        overflow: visible;
+    }
+
+    #app-layout-main {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #app-sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 30;
+        width: min(100vw - 1rem, 18rem);
+        max-width: calc(100vw - 1rem);
+        height: 100dvh;
     }
 }
 
@@ -920,11 +955,6 @@ html {
 }
 
 @media (max-width: 767px) {
-    #app-sidebar {
-        width: min(100vw - 1rem, 18rem);
-        max-width: calc(100vw - 1rem);
-    }
-
     .fc .fc-toolbar {
         flex-direction: column;
         gap: 0.75rem;

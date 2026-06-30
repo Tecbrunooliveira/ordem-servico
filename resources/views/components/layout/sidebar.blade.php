@@ -6,7 +6,7 @@
 
 <aside
     id="app-sidebar"
-    class="fixed inset-y-0 left-0 z-30 flex h-screen w-64 shrink-0 -translate-x-full flex-col overflow-hidden text-sidebar-text transition-all duration-300 ease-in-out lg:relative lg:z-auto lg:w-[4.5rem] lg:shrink-0 lg:translate-x-0"
+    class="fixed inset-y-0 left-0 z-30 flex h-[100dvh] w-64 max-w-[calc(100vw-1rem)] -translate-x-full flex-col overflow-hidden text-sidebar-text transition-all duration-300 ease-in-out lg:relative lg:z-auto lg:h-screen lg:w-[4.5rem] lg:max-w-none lg:shrink-0 lg:translate-x-0"
     :class="sidebarOpen ? '!translate-x-0 lg:!w-64' : ''"
 >
     <div

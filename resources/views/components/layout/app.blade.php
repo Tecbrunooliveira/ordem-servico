@@ -93,9 +93,11 @@
             aria-hidden="true"
         ></div>
 
-        <x-layout.sidebar />
+        <div id="app-layout-sidebar-host" class="max-lg:w-0 max-lg:shrink-0 max-lg:overflow-visible">
+            <x-layout.sidebar />
+        </div>
 
-        <div id="app-layout-main" class="flex min-w-0 flex-1 flex-col overflow-x-hidden">
+        <div id="app-layout-main" class="flex min-w-0 w-full flex-1 flex-col overflow-x-hidden">
             <x-layout.header :title="$title" :subtitle="$subtitle" />
 
             <main class="app-main flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8">
