@@ -12,7 +12,7 @@
     :class="sidebarOpen ? '!translate-x-0 lg:!w-64' : ''"
 >
     <div
-        class="sidebar-brand flex shrink-0 items-center border-b border-[#005300]/10 transition-all duration-300"
+        class="sidebar-brand flex shrink-0 items-center border-b border-[#005300]/15 transition-all duration-300"
         :class="sidebarOpen ? 'gap-3 px-5 py-5' : 'justify-center px-2 py-4'"
     >
         <div class="sidebar-brand__logo flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#005300] to-[#004200] text-white shadow-md shadow-[#005300]/25 ring-1 ring-[#005300]/20">
@@ -84,7 +84,7 @@
     </nav>
 
     <div
-        class="shrink-0 border-t border-[#005300]/10 transition-all duration-300"
+        class="shrink-0 border-t border-[#005300]/15 bg-white/45 backdrop-blur-sm transition-all duration-300"
         :class="sidebarOpen ? 'p-3' : 'p-2'"
     >
         <form
