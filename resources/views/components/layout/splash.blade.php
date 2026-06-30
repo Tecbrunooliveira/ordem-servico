@@ -1,6 +1,5 @@
 @php
-    $empresa = \App\Support\EmpresaConfig::get();
-    $nomeMarca = ! empty($empresa['razao_social']) ? $empresa['razao_social'] : ($empresa['nome_empresa'] ?? config('navigation.brand.name'));
+    $marca = \App\Support\EmpresaConfig::branding();
     $usuario = auth()->user();
     $nomeUsuario = $usuario?->nome ?? 'Usuário';
     $primeiroNome = explode(' ', trim($nomeUsuario))[0];
@@ -17,16 +16,20 @@
     <div class="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-white/[0.04]"></div>
 
     <div class="app-splash-content relative flex flex-col items-center text-center">
-        <div class="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-white/15 shadow-2xl shadow-black/20 ring-1 ring-white/20 backdrop-blur-sm">
-            @if (! empty($empresa['logo']))
-                <img src="{{ $empresa['logo'] }}" alt="{{ $nomeMarca }}" class="h-12 w-12 object-contain">
+        <div @class([
+            'mb-6 flex items-center justify-center overflow-hidden rounded-2xl shadow-2xl shadow-black/20 ring-1 backdrop-blur-sm',
+            'h-20 w-20 bg-white/95 ring-white/30' => $marca['tem_logo'],
+            'h-20 w-20 bg-white/15 ring-white/20' => ! $marca['tem_logo'],
+        ])>
+            @if ($marca['tem_logo'])
+                <img src="{{ $marca['logo'] }}" alt="{{ $marca['nome'] }}" class="max-h-14 max-w-[4.5rem] object-contain px-2">
             @else
                 <x-icon name="wrench-screwdriver" class="h-10 w-10 text-white" />
             @endif
         </div>
 
         <p class="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
-            {{ config('navigation.brand.name') }}
+            {{ $marca['nome'] }}
         </p>
         <h1 class="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
             Bem-vindo, {{ $primeiroNome }}!

@@ -26,6 +26,23 @@ class EmpresaConfig
     }
 
     /** @return array<string, mixed> */
+    public static function branding(): array
+    {
+        $empresa = self::get();
+        $nome = trim((string) ($empresa['nome_empresa'] ?? '')) ?: (string) config('navigation.brand.name');
+        $razao = trim((string) ($empresa['razao_social'] ?? '')) ?: $nome;
+        $logo = $empresa['logo'] ?? null;
+
+        return [
+            'nome' => $nome,
+            'razao_social' => $razao,
+            'subtitulo' => $razao !== $nome ? $razao : (string) config('navigation.brand.subtitle'),
+            'logo' => $logo,
+            'tem_logo' => filled($logo),
+        ];
+    }
+
+    /** @return array<string, mixed> */
     public static function get(): array
     {
         $empresa = Empresa::query()->first();
@@ -69,7 +86,7 @@ class EmpresaConfig
 
         $empresa->update(['caminho_logo' => $filename]);
 
-        return Storage::disk('public')->url($filename);
+        return asset('storage/'.$filename);
     }
 
     public static function removeLogo(): void

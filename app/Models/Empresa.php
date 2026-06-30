@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 
 class Empresa extends Model
 {
@@ -35,7 +34,7 @@ class Empresa extends Model
             return null;
         }
 
-        return Storage::disk('public')->url($this->caminho_logo);
+        return asset('storage/'.$this->caminho_logo);
     }
 
     /** @return array<string, mixed> */

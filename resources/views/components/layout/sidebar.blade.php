@@ -1,10 +1,7 @@
 @php
     $currentRoute = request()->route()?->getName();
-    $empresa = \App\Support\EmpresaConfig::get();
+    $marca = \App\Support\EmpresaConfig::branding();
     $tarefasAlertaCount = \App\Support\NotificationCenter::tarefasAlertaCount();
-    $nomeMarca = ! empty($empresa['razao_social'])
-        ? $empresa['razao_social']
-        : ($empresa['nome_empresa'] ?? config('navigation.brand.name'));
 @endphp
 
 <aside
@@ -16,16 +13,20 @@
         class="sidebar-brand flex shrink-0 items-center border-b border-[#005300]/15 transition-all duration-300"
         :class="sidebarOpen ? 'gap-3 px-5 py-5' : 'justify-center px-2 py-4'"
     >
-        <div class="sidebar-brand__logo flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#005300] to-[#004200] text-white shadow-md shadow-[#005300]/25 ring-1 ring-[#005300]/20">
-            @if (! empty($empresa['logo']))
-                <img src="{{ $empresa['logo'] }}" alt="{{ $nomeMarca }}" class="h-8 w-8 object-contain">
+        <div @class([
+            'sidebar-brand__logo flex shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-md ring-1',
+            'h-11 w-11 bg-white ring-slate-200' => $marca['tem_logo'],
+            'h-11 w-11 bg-gradient-to-br from-[#005300] to-[#004200] text-white shadow-[#005300]/25 ring-[#005300]/20' => ! $marca['tem_logo'],
+        ])>
+            @if ($marca['tem_logo'])
+                <img src="{{ $marca['logo'] }}" alt="{{ $marca['nome'] }}" class="max-h-8 max-w-[2.75rem] object-contain px-1">
             @else
                 <x-icon name="wrench-screwdriver" class="h-5 w-5" />
             @endif
         </div>
         <div class="min-w-0 overflow-hidden" x-show="sidebarOpen" x-cloak>
-            <p class="truncate text-sm font-bold tracking-tight text-slate-900">{{ $nomeMarca }}</p>
-            <p class="truncate text-xs font-medium text-[#005300]/70">{{ config('navigation.brand.subtitle') }}</p>
+            <p class="truncate text-sm font-bold tracking-tight text-slate-900">{{ $marca['nome'] }}</p>
+            <p class="truncate text-xs font-medium text-[#005300]/70">{{ $marca['subtitulo'] }}</p>
         </div>
     </div>
 

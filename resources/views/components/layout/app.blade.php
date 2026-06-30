@@ -61,7 +61,7 @@
         })();
     </script>
 
-    <title>{{ $title }} — {{ config('navigation.brand.name') }}</title>
+    <title>{{ $title }} — {{ \App\Support\EmpresaConfig::branding()['nome'] }}</title>
 
     {!! \App\Support\ViteManifest::styles(['resources/css/app.css']) !!}
     @livewireStyles

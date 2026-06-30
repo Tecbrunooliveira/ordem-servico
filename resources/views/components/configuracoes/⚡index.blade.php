@@ -303,7 +303,9 @@ new class extends Component
                             class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-600"
                         >
 
-                        <p class="mt-2 text-xs text-slate-500">PNG, JPG ou SVG. Máximo 2 MB.</p>
+                        <p class="mt-2 text-xs text-slate-500">
+                            PNG, JPG ou SVG. Máximo 2 MB. Recomendado: 240×80 px (horizontal) ou 128×128 px (quadrada), fundo transparente.
+                        </p>
 
                         <div wire:loading wire:target="logo" class="mt-2 text-xs text-brand-600">
                             Carregando logo...
