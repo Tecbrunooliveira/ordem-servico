@@ -23,6 +23,7 @@ class Tarefa extends Model
         'prioridade',
         'data_vencimento',
         'responsavel_id',
+        'cliente_id',
         'categoria',
         'data_inicio',
         'tempo_segundos',
@@ -50,6 +51,11 @@ class Tarefa extends Model
     public function responsavel(): BelongsTo
     {
         return $this->belongsTo(Usuario::class, 'responsavel_id');
+    }
+
+    public function cliente(): BelongsTo
+    {
+        return $this->belongsTo(Cliente::class);
     }
 
     public function comentarios(): HasMany

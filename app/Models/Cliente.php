@@ -45,6 +45,11 @@ class Cliente extends Model
         return $this->hasMany(OrdemServico::class);
     }
 
+    public function tarefas(): HasMany
+    {
+        return $this->hasMany(Tarefa::class);
+    }
+
     public function enderecoCompleto(): string
     {
         $partes = array_filter([

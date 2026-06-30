@@ -34,13 +34,15 @@ class TarefaRepository
     /** @return Builder<Tarefa> */
     public static function query(): Builder
     {
-        $with = ['responsavel', 'comentarios', 'anexos'];
+        $with = ['responsavel', 'cliente', 'comentarios', 'anexos'];
 
         if (self::hasExecutionTracking()) {
             $with[] = 'pausas';
         }
 
-        return Tarefa::query()->with($with);
+        return ClienteAccess::aplicarFiltroCliente(
+            Tarefa::query()->with($with),
+        );
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -93,6 +95,7 @@ class TarefaRepository
             'prioridade' => $data['prioridade'],
             'data_vencimento' => $data['data_vencimento'] ?? null,
             'responsavel_id' => self::resolveResponsavelId($data['responsavel'] ?? ''),
+            'cliente_id' => self::normalizeClienteId($data['cliente_id'] ?? null),
             'categoria' => $data['categoria'],
             'data_inicio' => $data['data_inicio'],
             'tempo_segundos' => (int) ($data['tempo_segundos'] ?? 0),
@@ -114,6 +117,7 @@ class TarefaRepository
             'prioridade' => $data['prioridade'],
             'data_vencimento' => $data['data_vencimento'] ?? null,
             'responsavel_id' => self::resolveResponsavelId($data['responsavel'] ?? ''),
+            'cliente_id' => self::normalizeClienteId($data['cliente_id'] ?? null),
             'categoria' => $data['categoria'],
             'data_inicio' => $data['data_inicio'],
             'tempo_segundos' => (int) ($data['tempo_segundos'] ?? 0),
@@ -133,6 +137,7 @@ class TarefaRepository
             'prioridade' => $tarefa['prioridade'],
             'data_vencimento' => $tarefa['data_vencimento'] ?: null,
             'responsavel_id' => self::resolveResponsavelId($tarefa['responsavel'] ?? ''),
+            'cliente_id' => self::normalizeClienteId($tarefa['cliente_id'] ?? null),
             'categoria' => $tarefa['categoria'],
             'data_inicio' => $tarefa['data_inicio'],
             'tempo_segundos' => (int) ($tarefa['tempo_segundos'] ?? 0),
@@ -218,6 +223,8 @@ class TarefaRepository
             'prioridade' => $tarefa->prioridade->value,
             'data_vencimento' => $tarefa->data_vencimento?->toDateString(),
             'responsavel' => $tarefa->responsavel?->nome ?? '—',
+            'cliente_id' => $tarefa->cliente_id,
+            'cliente_nome' => $tarefa->cliente?->nome,
             'categoria' => $tarefa->categoria->value,
             'data_inicio' => $tarefa->data_inicio?->toDateString(),
             'tempo_segundos' => (int) $tarefa->tempo_segundos,
@@ -251,6 +258,15 @@ class TarefaRepository
                     ->all()
                 : [],
         ];
+    }
+
+    private static function normalizeClienteId(mixed $clienteId): ?int
+    {
+        if ($clienteId === null || $clienteId === '') {
+            return null;
+        }
+
+        return (int) $clienteId;
     }
 
     /** @param  array<string, mixed>  $data */

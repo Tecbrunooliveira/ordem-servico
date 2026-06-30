@@ -2,6 +2,7 @@
 
 use App\Enums\OrdemServicoStatus;
 use App\Enums\OrdemServicoTipo;
+use App\Support\ClienteAccess;
 use App\Support\ClienteStore;
 use App\Support\EmpresaConfig;
 use App\Support\OrdemServicoRepository;
@@ -543,6 +544,10 @@ new class extends Component
 
     public function create(): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         $this->closeVisualizar();
         $this->resetForm();
         $this->showForm = true;
@@ -550,6 +555,10 @@ new class extends Component
 
     public function edit(int $id): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         $ordem = $this->findOrdem($id);
 
         $this->closeVisualizar();
@@ -569,6 +578,10 @@ new class extends Component
 
     public function save(): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         if (blank($this->tecnico_id)) {
             $this->tecnico_id = null;
         }
@@ -601,6 +614,10 @@ new class extends Component
 
     public function delete(int $id): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         OrdemServicoRepository::delete($id);
         $this->carregarOrdens();
 
@@ -1094,6 +1111,20 @@ new class extends Component
             ->all();
     }
 
+    private function bloquearEdicao(): bool
+    {
+        if (! ClienteAccess::somenteLeitura()) {
+            return false;
+        }
+
+        $this->notification()->warning(
+            'Acesso restrito',
+            'Usuários cliente podem apenas visualizar ordens de serviço vinculadas.',
+        );
+
+        return true;
+    }
+
     public function with(): array
     {
         return [
@@ -1104,12 +1135,19 @@ new class extends Component
             'clientesFiltroBusca' => $this->clientesFiltroBusca(),
             'tipos' => OrdemServicoTipo::options(),
             'statuses' => OrdemServicoStatus::options(),
+            'modoSomenteLeitura' => ClienteAccess::somenteLeitura(),
         ];
     }
 };
 ?>
 
 <div>
+    @if ($modoSomenteLeitura)
+        <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            Você está visualizando apenas as ordens de serviço vinculadas ao seu cadastro de cliente.
+        </div>
+    @endif
+
     @if ($runningOrdemId)
         <div wire:poll.1s></div>
     @endif
@@ -1323,7 +1361,9 @@ new class extends Component
                     Filtros
                 </button>
 
-                <x-button primary icon="plus" label="Nova Ordem" wire:click="create" class="!w-auto shrink-0 whitespace-nowrap" />
+                @if (! $modoSomenteLeitura)
+                    <x-button primary icon="plus" label="Nova Ordem" wire:click="create" class="!w-auto shrink-0 whitespace-nowrap" />
+                @endif
             </div>
 
             <div

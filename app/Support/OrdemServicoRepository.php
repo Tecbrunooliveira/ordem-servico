@@ -15,8 +15,10 @@ class OrdemServicoRepository
     /** @return Builder<OrdemServico> */
     public static function query(): Builder
     {
-        return OrdemServico::query()
-            ->with(['comentarios', 'pausas', 'cliente', 'tecnico']);
+        return ClienteAccess::aplicarFiltroCliente(
+            OrdemServico::query()
+                ->with(['comentarios', 'pausas', 'cliente', 'tecnico']),
+        );
     }
 
     /** @return array<int, array<string, mixed>> */

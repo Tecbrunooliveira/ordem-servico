@@ -4,6 +4,8 @@ use App\Enums\TarefaCategoria;
 use App\Enums\TarefaPrioridade;
 use App\Enums\TarefaRecorrencia;
 use App\Enums\TarefaStatus;
+use App\Support\ClienteAccess;
+use App\Support\ClienteStore;
 use App\Support\TarefaRepository;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -27,6 +29,10 @@ new class extends Component
     public string $filtroStatus = '';
 
     public string $filtroVencimento = '';
+
+    public string $filtroCliente = '';
+
+    public ?int $cliente_id = null;
 
     public ?int $editingId = null;
 
@@ -103,12 +109,16 @@ new class extends Component
     /** @var array<string, mixed>|null */
     public ?array $comentarioTarefa = null;
 
+    /** @var array<int, array<string, mixed>> */
+    public array $clientes = [];
+
     /** @var array<int, string> */
     public array $responsaveis = [];
 
     public function mount(): void
     {
         $this->responsaveis = TarefaRepository::responsaveisDisponiveis();
+        $this->clientes = ClienteStore::all();
         $this->carregarTarefas();
     }
 
@@ -131,6 +141,7 @@ new class extends Component
             'prioridade' => ['required', 'in:'.implode(',', array_column(TarefaPrioridade::cases(), 'value'))],
             'data_vencimento' => ['nullable', 'date'],
             'responsavel' => ['required', 'string', 'max:255'],
+            'cliente_id' => ['nullable', 'integer', 'exists:clientes,id'],
             'categoria' => ['required', 'in:'.implode(',', array_column(TarefaCategoria::cases(), 'value'))],
             'data_inicio' => ['required', 'date'],
             'recorrencia' => ['required', 'in:'.implode(',', array_column(TarefaRecorrencia::cases(), 'value'))],
@@ -146,6 +157,10 @@ new class extends Component
 
     public function create(): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         $this->closeVisualizar();
         $this->resetForm();
         $this->data_inicio = now()->toDateString();
@@ -160,6 +175,10 @@ new class extends Component
 
     public function edit(int $id): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         $this->closeVisualizar();
         $tarefa = $this->findTask($id);
 
@@ -170,6 +189,7 @@ new class extends Component
         $this->prioridade = $tarefa['prioridade'];
         $this->data_vencimento = $tarefa['data_vencimento'] ?? '';
         $this->responsavel = $tarefa['responsavel'];
+        $this->cliente_id = $tarefa['cliente_id'] ?? null;
         $this->categoria = $tarefa['categoria'];
         $this->data_inicio = $tarefa['data_inicio'];
         $this->formTempoSegundos = $tarefa['tempo_segundos'];
@@ -182,6 +202,10 @@ new class extends Component
 
     public function save(): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         $data = $this->validate();
         $data['data_vencimento'] = $data['data_vencimento'] ?: null;
 
@@ -198,6 +222,7 @@ new class extends Component
             'prioridade' => $data['prioridade'],
             'data_vencimento' => $data['data_vencimento'],
             'responsavel' => $data['responsavel'],
+            'cliente_id' => $data['cliente_id'] ?? null,
             'categoria' => $data['categoria'],
             'data_inicio' => $data['data_inicio'],
             'tempo_segundos' => $this->formTempoSegundos,
@@ -236,6 +261,10 @@ new class extends Component
 
     public function delete(int $id): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         TarefaRepository::delete($id);
         $this->carregarTarefas();
 
@@ -250,6 +279,10 @@ new class extends Component
 
     public function updateStatus(int $id, string $status): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         if (! in_array($status, array_column(TarefaStatus::cases(), 'value'), true)) {
             return;
         }
@@ -267,6 +300,10 @@ new class extends Component
 
     public function updatePrioridade(int $id, string $prioridade): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         if (! in_array($prioridade, array_column(TarefaPrioridade::cases(), 'value'), true)) {
             return;
         }
@@ -284,6 +321,10 @@ new class extends Component
 
     public function updateVencimento(int $id, string $date): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         $index = $this->findTaskIndex($id);
         $this->tarefas[$index]['data_vencimento'] = $date ?: null;
         $this->persistTarefaIndex($index);
@@ -297,6 +338,10 @@ new class extends Component
 
     public function updateResponsavel(int $id, string $responsavel): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         if (! in_array($responsavel, $this->responsaveis, true)) {
             return;
         }
@@ -369,6 +414,10 @@ new class extends Component
 
     public function adicionarComentario(): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         $tarefaRef = $this->visualizarTarefa ?? $this->comentarioTarefa;
 
         if (! $tarefaRef) {
@@ -489,6 +538,10 @@ new class extends Component
 
     public function iniciarTarefa(int $id): void
     {
+        if ($this->bloquearEdicao()) {
+            return;
+        }
+
         if (! TarefaRepository::hasExecutionTracking()) {
             $this->notification()->error('Cronômetro indisponível', 'Execute as migrations do cronômetro de tarefas no servidor.');
 
@@ -780,6 +833,7 @@ new class extends Component
             'descricao',
             'data_vencimento',
             'responsavel',
+            'cliente_id',
         ]);
         $this->status = TarefaStatus::Pendente->value;
         $this->prioridade = TarefaPrioridade::Media->value;
@@ -843,6 +897,10 @@ new class extends Component
                     return false;
                 }
 
+                if ($this->filtroCliente !== '' && (string) ($tarefa['cliente_id'] ?? '') !== $this->filtroCliente) {
+                    return false;
+                }
+
                 return true;
             })
             ->values()
@@ -857,7 +915,22 @@ new class extends Component
             'filtroResponsavel',
             'filtroStatus',
             'filtroVencimento',
+            'filtroCliente',
         ]);
+    }
+
+    private function bloquearEdicao(): bool
+    {
+        if (! ClienteAccess::somenteLeitura()) {
+            return false;
+        }
+
+        $this->notification()->warning(
+            'Acesso restrito',
+            'Usuários cliente podem apenas visualizar tarefas vinculadas.',
+        );
+
+        return true;
     }
 
     public function with(): array
@@ -867,6 +940,8 @@ new class extends Component
             'prioridades' => TarefaPrioridade::options(),
             'categorias' => TarefaCategoria::options(),
             'recorrencias' => TarefaRecorrencia::options(),
+            'clientes' => $this->clientes,
+            'modoSomenteLeitura' => ClienteAccess::somenteLeitura(),
             'pendentesCount' => collect($this->tarefas)->whereIn('status', ['pendente', 'em_andamento'])->count(),
             'tarefasLista' => $this->tarefasFiltradas(),
             'totalTarefas' => count($this->tarefas),
@@ -879,6 +954,12 @@ new class extends Component
 <div>
     @if ($runningTaskId || $timerRunning || $showVisualizar)
         <div wire:poll.1s></div>
+    @endif
+
+    @if ($modoSomenteLeitura)
+        <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            Você está visualizando apenas as tarefas vinculadas ao seu cadastro de cliente.
+        </div>
     @endif
 
     @if (! $cronometroDisponivel && ! $showForm)
@@ -908,6 +989,15 @@ new class extends Component
 
                     <div class="sm:col-span-2">
                         <x-textarea wire:model="descricao" label="Descrição" placeholder="Detalhes da tarefa..." />
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <x-native-select wire:model="cliente_id" label="Cliente (opcional)">
+                            <option value="">Nenhum</option>
+                            @foreach ($clientes as $cliente)
+                                <option value="{{ $cliente['id'] }}">{{ $cliente['nome'] }}</option>
+                            @endforeach
+                        </x-native-select>
                     </div>
 
                     <x-native-select wire:model="status" label="Status">
@@ -1024,7 +1114,9 @@ new class extends Component
                     Filtros
                 </button>
 
-                <x-button primary icon="plus" label="Nova Tarefa" wire:click="create" class="!w-auto shrink-0 whitespace-nowrap" />
+                @if (! $modoSomenteLeitura)
+                    <x-button primary icon="plus" label="Nova Tarefa" wire:click="create" class="!w-auto shrink-0 whitespace-nowrap" />
+                @endif
             </div>
 
             <div
@@ -1033,7 +1125,7 @@ new class extends Component
                 x-cloak
                 class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
             >
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
                     <x-native-select wire:model.live="filtroPrioridade" label="Prioridade">
                         <option value="">Todas</option>
                         @foreach ($prioridades as $value => $label)
@@ -1056,9 +1148,18 @@ new class extends Component
                     </x-native-select>
 
                     <x-input wire:model.live="filtroVencimento" label="Vencimento" type="date" />
+
+                    @if (! $modoSomenteLeitura)
+                        <x-native-select wire:model.live="filtroCliente" label="Cliente">
+                            <option value="">Todos</option>
+                            @foreach ($clientes as $cliente)
+                                <option value="{{ $cliente['id'] }}">{{ $cliente['nome'] }}</option>
+                            @endforeach
+                        </x-native-select>
+                    @endif
                 </div>
 
-                @if ($busca || $filtroPrioridade || $filtroResponsavel || $filtroStatus || $filtroVencimento)
+                @if ($busca || $filtroPrioridade || $filtroResponsavel || $filtroStatus || $filtroVencimento || $filtroCliente)
                     <div class="mt-4 flex justify-end border-t border-slate-100 pt-4">
                         <x-button flat label="Limpar filtros" wire:click="limparFiltros" />
                     </div>
@@ -1079,11 +1180,12 @@ new class extends Component
                         <thead class="border-b border-slate-100 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
                             <tr>
                                 <th class="px-5 py-3">Título</th>
+                                <th class="hidden px-5 py-3 md:table-cell">Cliente</th>
                                 <th class="px-5 py-3">Responsável</th>
                                 <th class="px-5 py-3">Prioridade</th>
                                 <th class="px-5 py-3">Status</th>
                                 <th class="px-5 py-3">Vencimento</th>
-                                @if ($cronometroDisponivel)
+                                @if ($cronometroDisponivel && ! $modoSomenteLeitura)
                                     <th class="px-5 py-3 text-center">Exec.</th>
                                 @endif
                                 <th class="px-5 py-3 text-right">Ações</th>
@@ -1110,6 +1212,7 @@ new class extends Component
                                         <p class="font-medium text-slate-900">{{ $tarefa['titulo'] }}</p>
                                         <p class="text-xs text-slate-600">{{ \App\Enums\TarefaCategoria::from($tarefa['categoria'])->label() }}</p>
                                     </td>
+                                    <td class="hidden px-5 py-4 text-slate-700 md:table-cell">{{ $tarefa['cliente_nome'] ?? '—' }}</td>
                                     <td class="px-5 py-4 text-slate-700">{{ $tarefa['responsavel'] }}</td>
                                     <td class="px-5 py-4">
                                         <span class="inline-flex items-center gap-1.5 text-xs font-medium" style="color: {{ $prioridade->color() }}">
@@ -1133,7 +1236,7 @@ new class extends Component
                                     <td class="px-5 py-4 text-slate-700">
                                         {{ $tarefa['data_vencimento'] ? \Illuminate\Support\Carbon::parse($tarefa['data_vencimento'])->format('d/m/Y') : '—' }}
                                     </td>
-                                    @if ($cronometroDisponivel)
+                                    @if ($cronometroDisponivel && ! $modoSomenteLeitura)
                                     <td class="px-5 py-4 text-center">
                                         @if ($canIniciar || $canPausar || $canParar)
                                             <div class="inline-flex items-center rounded-md border border-slate-200 bg-white p-0.5 shadow-sm">
@@ -1187,6 +1290,7 @@ new class extends Component
                                                 <x-icon name="eye" class="h-4 w-4" />
                                             </button>
 
+                                            @if (! $modoSomenteLeitura)
                                             <button type="button" wire:click="edit({{ $tarefa['id'] }})" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 hover:text-brand-600">
                                                 <x-icon name="pencil" class="h-4 w-4" />
                                             </button>
@@ -1246,13 +1350,14 @@ new class extends Component
                                                     Comentário
                                                 </button>
                                             </x-table-action-menu>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ $cronometroDisponivel ? 7 : 6 }}" class="px-5 py-12 text-center text-slate-600">
-                                        @if ($busca || $filtroPrioridade || $filtroResponsavel || $filtroStatus || $filtroVencimento)
+                                    <td colspan="{{ ($cronometroDisponivel && ! $modoSomenteLeitura) ? 8 : 7 }}" class="px-5 py-12 text-center text-slate-600">
+                                        @if ($busca || $filtroPrioridade || $filtroResponsavel || $filtroStatus || $filtroVencimento || $filtroCliente)
                                             Nenhuma tarefa encontrada com os filtros aplicados.
                                         @else
                                             Nenhuma tarefa cadastrada.
@@ -1263,8 +1368,8 @@ new class extends Component
                         </tbody>
                         <tfoot class="border-t border-slate-100 bg-slate-50">
                             <tr>
-                                <td colspan="{{ $cronometroDisponivel ? 7 : 6 }}" class="px-5 py-3 text-sm text-slate-600">
-                                    @if ($busca || $filtroPrioridade || $filtroResponsavel || $filtroStatus || $filtroVencimento)
+                                <td colspan="{{ ($cronometroDisponivel && ! $modoSomenteLeitura) ? 8 : 7 }}" class="px-5 py-3 text-sm text-slate-600">
+                                    @if ($busca || $filtroPrioridade || $filtroResponsavel || $filtroStatus || $filtroVencimento || $filtroCliente)
                                         Exibindo {{ count($tarefasLista) }} de {{ $totalTarefas }} tarefas · {{ $pendentesCount }} em aberto
                                     @else
                                         {{ $totalTarefas }} {{ $totalTarefas === 1 ? 'tarefa cadastrada' : 'tarefas cadastradas' }} · {{ $pendentesCount }} em aberto
@@ -1517,6 +1622,10 @@ new class extends Component
 
                             <dl class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+                                    <dt class="text-xs font-medium text-slate-500">Cliente</dt>
+                                    <dd class="mt-0.5 text-sm font-medium text-slate-900">{{ $tarefaView['cliente_nome'] ?? '—' }}</dd>
+                                </div>
+                                <div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
                                     <dt class="text-xs font-medium text-slate-500">Responsável</dt>
                                     <dd class="mt-0.5 text-sm font-medium text-slate-900">{{ $tarefaView['responsavel'] }}</dd>
                                 </div>
@@ -1617,7 +1726,9 @@ new class extends Component
 
                 <div class="flex shrink-0 justify-end gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4">
                     <x-button flat label="Fechar" wire:click="closeVisualizar" />
-                    <x-button primary icon="pencil" label="Editar tarefa" wire:click="edit({{ $tarefaView['id'] }})" />
+                    @if (! $modoSomenteLeitura)
+                        <x-button primary icon="pencil" label="Editar tarefa" wire:click="edit({{ $tarefaView['id'] }})" />
+                    @endif
                 </div>
             </div>
         </div>

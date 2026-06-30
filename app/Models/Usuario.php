@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\UsuarioTipo;
+use App\Support\ClienteAccess;
 use Database\Factories\UsuarioFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -55,15 +56,15 @@ class Usuario extends Authenticatable
 
     public function can($abilities, $arguments = []): bool
     {
-        if ($this->tipo === UsuarioTipo::Administrador) {
-            return true;
+        $abilities = is_array($abilities) ? $abilities : [$abilities];
+
+        foreach ($abilities as $ability) {
+            if (! ClienteAccess::pode((string) $ability, $this)) {
+                return false;
+            }
         }
 
-        if ($this->tipo === UsuarioTipo::Cliente) {
-            return false;
-        }
-
-        return $this->tipo === UsuarioTipo::Tecnico;
+        return true;
     }
 
     public function clientes(): BelongsToMany
