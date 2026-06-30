@@ -495,6 +495,12 @@ new class extends Component
 
     public function iniciarTarefa(int $id): void
     {
+        if (! TarefaRepository::hasExecutionTracking()) {
+            $this->notification()->error('Cronômetro indisponível', 'Execute as migrations do cronômetro de tarefas no servidor.');
+
+            return;
+        }
+
         $tarefa = $this->findTask($id);
 
         if (in_array($tarefa['status'], [TarefaStatus::Concluida->value, TarefaStatus::Cancelada->value], true)) {
@@ -881,13 +887,23 @@ new class extends Component
             'pendentesCount' => collect($this->tarefas)->whereIn('status', ['pendente', 'em_andamento'])->count(),
             'tarefasLista' => $this->tarefasFiltradas(),
             'totalTarefas' => count($this->tarefas),
+            'cronometroDisponivel' => TarefaRepository::hasExecutionTracking(),
         ];
     }
 };
 ?>
 
 <div>
-    <div wire:poll.1s></div>
+    @if ($runningTaskId || $timerRunning || $showVisualizar)
+        <div wire:poll.1s></div>
+    @endif
+
+    @if (! $cronometroDisponivel && ! $showForm)
+        <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            O cronômetro de tarefas requer uma atualização do banco de dados. Rode no servidor:
+            <code class="mt-1 block text-xs">bash scripts/migrate-tarefas-cronometro.sh</code>
+        </div>
+    @endif
 
     @if ($showForm)
         <div class="mx-auto max-w-4xl">
@@ -1084,7 +1100,9 @@ new class extends Component
                                 <th class="px-5 py-3">Prioridade</th>
                                 <th class="px-5 py-3">Status</th>
                                 <th class="px-5 py-3">Vencimento</th>
-                                <th class="px-5 py-3 text-center">Exec.</th>
+                                @if ($cronometroDisponivel)
+                                    <th class="px-5 py-3 text-center">Exec.</th>
+                                @endif
                                 <th class="px-5 py-3 text-right">Ações</th>
                             </tr>
                         </thead>
@@ -1132,6 +1150,7 @@ new class extends Component
                                     <td class="px-5 py-4 text-slate-700">
                                         {{ $tarefa['data_vencimento'] ? \Illuminate\Support\Carbon::parse($tarefa['data_vencimento'])->format('d/m/Y') : '—' }}
                                     </td>
+                                    @if ($cronometroDisponivel)
                                     <td class="px-5 py-4 text-center">
                                         @if ($canIniciar || $canPausar || $canParar)
                                             <div class="inline-flex items-center rounded-md border border-slate-200 bg-white p-0.5 shadow-sm">
@@ -1178,6 +1197,7 @@ new class extends Component
                                             </p>
                                         @endif
                                     </td>
+                                    @endif
                                     <td class="px-5 py-4">
                                         <div class="flex justify-end gap-2">
                                             <button type="button" wire:click="visualizar({{ $tarefa['id'] }})" title="Visualizar" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 hover:text-brand-600">
@@ -1248,7 +1268,7 @@ new class extends Component
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-5 py-12 text-center text-slate-600">
+                                    <td colspan="{{ $cronometroDisponivel ? 7 : 6 }}" class="px-5 py-12 text-center text-slate-600">
                                         @if ($busca || $filtroPrioridade || $filtroResponsavel || $filtroStatus || $filtroVencimento)
                                             Nenhuma tarefa encontrada com os filtros aplicados.
                                         @else
@@ -1260,7 +1280,7 @@ new class extends Component
                         </tbody>
                         <tfoot class="border-t border-slate-100 bg-slate-50">
                             <tr>
-                                <td colspan="7" class="px-5 py-3 text-sm text-slate-600">
+                                <td colspan="{{ $cronometroDisponivel ? 7 : 6 }}" class="px-5 py-3 text-sm text-slate-600">
                                     @if ($busca || $filtroPrioridade || $filtroResponsavel || $filtroStatus || $filtroVencimento)
                                         Exibindo {{ count($tarefasLista) }} de {{ $totalTarefas }} tarefas · {{ $pendentesCount }} em aberto
                                     @else
@@ -1423,7 +1443,7 @@ new class extends Component
 
                 <div class="flex min-h-0 flex-1 flex-col lg:flex-row">
                     <div class="min-h-0 flex-1 overflow-y-auto px-6 py-6 lg:border-r lg:border-slate-100">
-                        @if (! $finalizadaView)
+                        @if ($cronometroDisponivel && ! $finalizadaView)
                             <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
                                 <div class="flex items-center gap-3">
                                     <span class="font-mono text-lg font-semibold tabular-nums text-slate-900">
@@ -1466,7 +1486,7 @@ new class extends Component
                                     @endif
                                 </div>
                             </div>
-                        @else
+                        @elseif ($cronometroDisponivel && $finalizadaView)
                             <div class="mb-5 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
                                 <span class="font-mono text-lg font-semibold tabular-nums text-emerald-900">
                                     {{ $this->tempoAtual($tarefaView['tempo_segundos'] ?? 0) }}

@@ -8,15 +8,39 @@ use App\Models\TarefaComentario;
 use App\Models\TarefaPausa;
 use App\Models\Usuario;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class TarefaRepository
 {
+    private static ?bool $executionTracking = null;
+
+    public static function hasExecutionTracking(): bool
+    {
+        if (self::$executionTracking !== null) {
+            return self::$executionTracking;
+        }
+
+        self::$executionTracking = Schema::hasTable('tarefas')
+            && Schema::hasColumn('tarefas', 'pausada')
+            && Schema::hasColumn('tarefas', 'iniciada_em')
+            && Schema::hasColumn('tarefas', 'finalizada_em')
+            && Schema::hasTable('pausas_tarefa');
+
+        return self::$executionTracking;
+    }
+
     /** @return Builder<Tarefa> */
     public static function query(): Builder
     {
-        return Tarefa::query()->with(['responsavel', 'comentarios', 'anexos', 'pausas']);
+        $with = ['responsavel', 'comentarios', 'anexos'];
+
+        if (self::hasExecutionTracking()) {
+            $with[] = 'pausas';
+        }
+
+        return Tarefa::query()->with($with);
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -62,7 +86,7 @@ class TarefaRepository
     /** @param  array<string, mixed>  $data */
     public static function createFromForm(array $data): int
     {
-        $tarefa = Tarefa::query()->create([
+        $payload = [
             'titulo' => $data['titulo'],
             'descricao' => $data['descricao'] ?? null,
             'status' => $data['status'],
@@ -72,11 +96,10 @@ class TarefaRepository
             'categoria' => $data['categoria'],
             'data_inicio' => $data['data_inicio'],
             'tempo_segundos' => (int) ($data['tempo_segundos'] ?? 0),
-            'pausada' => (bool) ($data['pausada'] ?? false),
-            'iniciada_em' => $data['iniciada_em'] ?? null,
-            'finalizada_em' => $data['finalizada_em'] ?? null,
             'recorrencia' => $data['recorrencia'],
-        ]);
+        ];
+
+        $tarefa = Tarefa::query()->create(array_merge($payload, self::executionAttributesFromInput($data)));
 
         return $tarefa->id;
     }
@@ -84,7 +107,7 @@ class TarefaRepository
     /** @param  array<string, mixed>  $data */
     public static function updateFromForm(int $id, array $data): void
     {
-        Tarefa::query()->whereKey($id)->update([
+        $payload = [
             'titulo' => $data['titulo'],
             'descricao' => $data['descricao'] ?? null,
             'status' => $data['status'],
@@ -94,17 +117,16 @@ class TarefaRepository
             'categoria' => $data['categoria'],
             'data_inicio' => $data['data_inicio'],
             'tempo_segundos' => (int) ($data['tempo_segundos'] ?? 0),
-            'pausada' => (bool) ($data['pausada'] ?? false),
-            'iniciada_em' => $data['iniciada_em'] ?? null,
-            'finalizada_em' => $data['finalizada_em'] ?? null,
             'recorrencia' => $data['recorrencia'],
-        ]);
+        ];
+
+        Tarefa::query()->whereKey($id)->update(array_merge($payload, self::executionAttributesFromInput($data)));
     }
 
     /** @param  array<string, mixed>  $tarefa */
     public static function persistFromArray(array $tarefa): void
     {
-        Tarefa::query()->whereKey($tarefa['id'])->update([
+        $payload = [
             'titulo' => $tarefa['titulo'],
             'descricao' => $tarefa['descricao'] ?? null,
             'status' => $tarefa['status'],
@@ -114,11 +136,10 @@ class TarefaRepository
             'categoria' => $tarefa['categoria'],
             'data_inicio' => $tarefa['data_inicio'],
             'tempo_segundos' => (int) ($tarefa['tempo_segundos'] ?? 0),
-            'pausada' => (bool) ($tarefa['pausada'] ?? false),
-            'iniciada_em' => $tarefa['iniciada_em'] ?? null,
-            'finalizada_em' => $tarefa['finalizada_em'] ?? null,
             'recorrencia' => $tarefa['recorrencia'],
-        ]);
+        ];
+
+        Tarefa::query()->whereKey($tarefa['id'])->update(array_merge($payload, self::executionAttributesFromInput($tarefa)));
     }
 
     public static function delete(int $id): void
@@ -175,6 +196,10 @@ class TarefaRepository
 
     public static function addPausa(int $tarefaId, string $motivo): TarefaPausa
     {
+        if (! self::hasExecutionTracking()) {
+            throw new \RuntimeException('Cronômetro de tarefas indisponível: migrations pendentes.');
+        }
+
         return TarefaPausa::query()->create([
             'tarefa_id' => $tarefaId,
             'motivo' => $motivo,
@@ -196,9 +221,9 @@ class TarefaRepository
             'categoria' => $tarefa->categoria->value,
             'data_inicio' => $tarefa->data_inicio?->toDateString(),
             'tempo_segundos' => (int) $tarefa->tempo_segundos,
-            'pausada' => (bool) $tarefa->pausada,
-            'iniciada_em' => $tarefa->iniciada_em?->toDateTimeString(),
-            'finalizada_em' => $tarefa->finalizada_em?->toDateTimeString(),
+            'pausada' => self::hasExecutionTracking() ? (bool) $tarefa->pausada : false,
+            'iniciada_em' => self::hasExecutionTracking() ? $tarefa->iniciada_em?->toDateTimeString() : null,
+            'finalizada_em' => self::hasExecutionTracking() ? $tarefa->finalizada_em?->toDateTimeString() : null,
             'recorrencia' => $tarefa->recorrencia->value,
             'anexos' => $tarefa->anexos->map(fn (TarefaAnexo $anexo) => [
                 'id' => $anexo->id,
@@ -215,14 +240,30 @@ class TarefaRepository
                     'criado_em' => $comentario->criado_em->toDateTimeString(),
                 ])
                 ->all(),
-            'pausas' => $tarefa->pausas
-                ->sortBy('pausada_em')
-                ->values()
-                ->map(fn (TarefaPausa $pausa) => [
-                    'motivo' => $pausa->motivo,
-                    'em' => $pausa->pausada_em->toDateTimeString(),
-                ])
-                ->all(),
+            'pausas' => self::hasExecutionTracking()
+                ? $tarefa->pausas
+                    ->sortBy('pausada_em')
+                    ->values()
+                    ->map(fn (TarefaPausa $pausa) => [
+                        'motivo' => $pausa->motivo,
+                        'em' => $pausa->pausada_em->toDateTimeString(),
+                    ])
+                    ->all()
+                : [],
+        ];
+    }
+
+    /** @param  array<string, mixed>  $data */
+    private static function executionAttributesFromInput(array $data): array
+    {
+        if (! self::hasExecutionTracking()) {
+            return [];
+        }
+
+        return [
+            'pausada' => (bool) ($data['pausada'] ?? false),
+            'iniciada_em' => $data['iniciada_em'] ?? null,
+            'finalizada_em' => $data['finalizada_em'] ?? null,
         ];
     }
 }
