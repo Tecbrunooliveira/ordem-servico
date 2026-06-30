@@ -385,18 +385,39 @@ new class extends Component
             </form>
         </div>
     @else
-        <div class="mb-4 space-y-3">
-            <div class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-                <div class="flex flex-1 flex-col gap-3 lg:flex-row lg:items-end">
-                    <div class="flex-1">
-                        <x-input
-                            wire:model.live.debounce.300ms="busca"
-                            icon="magnifying-glass"
-                            label="Buscar"
-                            placeholder="Nome, e-mail ou telefone"
-                        />
-                    </div>
+        <div
+            class="mb-4 space-y-3"
+            x-data="{ filtrosAbertos: false }"
+        >
+            <div class="page-list-toolbar-row">
+                <div class="min-w-0">
+                    <x-input
+                        wire:model.live.debounce.300ms="busca"
+                        icon="magnifying-glass"
+                        label="Pesquisar"
+                        placeholder="Nome, e-mail ou telefone"
+                    />
+                </div>
 
+                <button
+                    type="button"
+                    x-on:click="filtrosAbertos = ! filtrosAbertos"
+                    class="inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                >
+                    <x-icon name="plus" class="h-4 w-4 transition-transform" x-bind:class="filtrosAbertos && 'rotate-45'" />
+                    Filtros
+                </button>
+
+                <x-button primary icon="plus" label="Novo Usuário" wire:click="create" class="!w-auto shrink-0 whitespace-nowrap" />
+            </div>
+
+            <div
+                x-show="filtrosAbertos"
+                x-transition
+                x-cloak
+                class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+            >
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     <x-native-select wire:model.live="filtroTipo" label="Tipo">
                         <option value="">Todos</option>
                         @foreach ($tipos as $value => $label)
@@ -405,14 +426,12 @@ new class extends Component
                     </x-native-select>
                 </div>
 
-                <x-button primary icon="plus" label="Novo Usuário" wire:click="create" />
+                @if ($busca || $filtroTipo)
+                    <div class="mt-4 flex justify-end border-t border-slate-100 pt-4">
+                        <x-button flat label="Limpar filtros" wire:click="limparFiltros" />
+                    </div>
+                @endif
             </div>
-
-            @if ($busca || $filtroTipo)
-                <div class="flex justify-end">
-                    <x-button flat label="Limpar filtros" wire:click="limparFiltros" />
-                </div>
-            @endif
         </div>
 
         <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
