@@ -6,6 +6,7 @@ use App\Enums\OrdemServicoStatus;
 use App\Enums\TarefaStatus;
 use App\Models\OrdemServico;
 use App\Models\Tarefa;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
@@ -62,13 +63,25 @@ class NotificationCenter
         $hoje = now()->toDateString();
         $statusAbertos = [TarefaStatus::Pendente->value, TarefaStatus::EmAndamento->value];
 
-        return Tarefa::query()
+        return self::tarefaQuery()
             ->whereIn('status', $statusAbertos)
             ->where(function ($query) use ($hoje): void {
                 $query->whereDate('data_vencimento', '<', $hoje)
                     ->orWhereDate('data_vencimento', $hoje);
             })
             ->count();
+    }
+
+    /** @return Builder<Tarefa> */
+    private static function tarefaQuery(): Builder
+    {
+        return ClienteAccess::aplicarFiltroCliente(Tarefa::query());
+    }
+
+    /** @return Builder<OrdemServico> */
+    private static function ordemServicoQuery(): Builder
+    {
+        return ClienteAccess::aplicarFiltroCliente(OrdemServico::query());
     }
 
     public static function markAsRead(int $userId, string $id): void
@@ -100,7 +113,7 @@ class NotificationCenter
         $items = [];
         $statusAbertosTarefa = [TarefaStatus::Pendente->value, TarefaStatus::EmAndamento->value];
 
-        Tarefa::query()
+        self::tarefaQuery()
             ->whereNotNull('data_vencimento')
             ->whereDate('data_vencimento', '<', $hoje)
             ->whereIn('status', $statusAbertosTarefa)
@@ -126,7 +139,7 @@ class NotificationCenter
                 ];
             });
 
-        $osHoje = OrdemServico::query()
+        $osHoje = self::ordemServicoQuery()
             ->whereDate('data_agendada', $hoje)
             ->whereIn('status', [OrdemServicoStatus::Pendente->value, OrdemServicoStatus::EmAndamento->value])
             ->count();
@@ -144,7 +157,7 @@ class NotificationCenter
             ];
         }
 
-        Tarefa::query()
+        self::tarefaQuery()
             ->whereDate('data_vencimento', $hoje)
             ->whereIn('status', $statusAbertosTarefa)
             ->orderBy('titulo')
@@ -161,7 +174,7 @@ class NotificationCenter
                 ];
             });
 
-        OrdemServico::query()
+        self::ordemServicoQuery()
             ->where('status', OrdemServicoStatus::Concluida->value)
             ->whereNotNull('finalizada_em')
             ->where('finalizada_em', '>=', now()->subDay())

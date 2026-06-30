@@ -6,10 +6,23 @@ use App\Enums\OrdemServicoStatus;
 use App\Enums\TarefaStatus;
 use App\Models\OrdemServico;
 use App\Models\Tarefa;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
 class DashboardRepository
 {
+    /** @return Builder<Tarefa> */
+    private static function tarefaQuery(): Builder
+    {
+        return ClienteAccess::aplicarFiltroCliente(Tarefa::query());
+    }
+
+    /** @return Builder<OrdemServico> */
+    private static function ordemServicoQuery(): Builder
+    {
+        return ClienteAccess::aplicarFiltroCliente(OrdemServico::query());
+    }
+
     /** @return array<int, array<string, string>> */
     public static function stats(): array
     {
@@ -17,7 +30,7 @@ class DashboardRepository
         $statusAbertosTarefa = [TarefaStatus::Pendente->value, TarefaStatus::EmAndamento->value];
         $statusAbertosOs = [OrdemServicoStatus::Pendente->value, OrdemServicoStatus::EmAndamento->value];
 
-        $tarefasHoje = Tarefa::query()
+        $tarefasHoje = self::tarefaQuery()
             ->where(function ($query) use ($hoje): void {
                 $query->whereDate('data_vencimento', $hoje)
                     ->orWhereDate('data_inicio', $hoje);
@@ -25,17 +38,17 @@ class DashboardRepository
             ->whereIn('status', $statusAbertosTarefa)
             ->count();
 
-        $tarefasAtraso = Tarefa::query()
+        $tarefasAtraso = self::tarefaQuery()
             ->whereNotNull('data_vencimento')
             ->whereDate('data_vencimento', '<', $hoje)
             ->whereIn('status', $statusAbertosTarefa)
             ->count();
 
-        $osAbertas = OrdemServico::query()
+        $osAbertas = self::ordemServicoQuery()
             ->whereIn('status', $statusAbertosOs)
             ->count();
 
-        $osHoje = OrdemServico::query()
+        $osHoje = self::ordemServicoQuery()
             ->whereDate('data_agendada', $hoje)
             ->whereIn('status', $statusAbertosOs)
             ->count();
@@ -67,7 +80,7 @@ class DashboardRepository
     {
         $hoje = now()->toDateString();
 
-        return OrdemServico::query()
+        return self::ordemServicoQuery()
             ->with(['cliente', 'tecnico'])
             ->whereDate('data_agendada', $hoje)
             ->where('status', '!=', OrdemServicoStatus::Cancelada->value)
