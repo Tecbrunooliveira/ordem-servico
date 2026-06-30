@@ -78,7 +78,23 @@ document.addEventListener('alpine:init', () => {
         soundEnabled: NotificationCenterUtil.prefs().sound,
         pushEnabled: NotificationCenterUtil.prefs().push,
         pushPermission: NotificationCenterUtil.pushPermission(),
+        alarmRinging: NotificationCenterUtil.isAlarmActive(),
         notificationCenter: NotificationCenterUtil,
+
+        init() {
+            window.addEventListener('notification-alarm-started', () => {
+                this.alarmRinging = true;
+            });
+
+            window.addEventListener('notification-alarm-stopped', () => {
+                this.alarmRinging = false;
+            });
+        },
+
+        silenceAlarm() {
+            this.notificationCenter.silenceAlarm();
+            this.alarmRinging = false;
+        },
 
         toggle() {
             const next = ! this.open;

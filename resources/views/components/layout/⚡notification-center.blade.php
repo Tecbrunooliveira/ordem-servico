@@ -84,10 +84,30 @@ new class extends Component
     @tarefas-updated.window="$wire.poll()"
     class="relative"
 >
+    <div
+        x-show="alarmRinging"
+        x-cloak
+        class="fixed right-4 top-20 z-[80] flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-2 shadow-lg sm:right-6"
+    >
+        <span class="relative flex h-2.5 w-2.5">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
+            <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500"></span>
+        </span>
+        <span class="text-xs font-medium text-amber-900">Alarme ativo</span>
+        <button
+            type="button"
+            x-on:click="silenceAlarm()"
+            class="rounded-full bg-amber-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-700"
+        >
+            Silenciar
+        </button>
+    </div>
+
     <button
         type="button"
         x-on:click="toggle()"
         class="relative rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+        :class="alarmRinging ? 'bg-amber-50 text-amber-700 ring-2 ring-amber-300 ring-offset-1' : ''"
         aria-label="Central de notificações"
         :aria-expanded="open"
     >
@@ -116,15 +136,26 @@ new class extends Component
                 <h3 class="text-sm font-semibold text-slate-900">Notificações</h3>
                 <p class="text-xs text-slate-500">{{ count($items) }} aviso(s)</p>
             </div>
-            @if ($unreadCount > 0)
+            <div class="flex items-center gap-2">
                 <button
                     type="button"
-                    wire:click="marcarTodasLidas"
-                    class="text-xs font-medium text-brand-600 hover:text-brand-700"
+                    x-show="alarmRinging"
+                    x-cloak
+                    x-on:click="silenceAlarm()"
+                    class="rounded-lg bg-amber-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
                 >
-                    Marcar todas lidas
+                    Silenciar alarme
                 </button>
-            @endif
+                @if ($unreadCount > 0)
+                    <button
+                        type="button"
+                        wire:click="marcarTodasLidas"
+                        class="text-xs font-medium text-brand-600 hover:text-brand-700"
+                    >
+                        Marcar todas lidas
+                    </button>
+                @endif
+            </div>
         </div>
 
         <div class="max-h-80 overflow-y-auto divide-y divide-slate-100">

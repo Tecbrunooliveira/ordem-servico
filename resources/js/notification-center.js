@@ -6,6 +6,13 @@ const DEFAULT_PREFS = {
     push: true,
 };
 
+const TYPE_PRIORITY = {
+    danger: 4,
+    warning: 3,
+    info: 2,
+    success: 1,
+};
+
 function readPrefs() {
     try {
         return { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') };
@@ -32,8 +39,14 @@ function markAlertedIds(ids) {
     sessionStorage.setItem(ALERTED_KEY, JSON.stringify(merged));
 }
 
+function pickAlertType(current, next) {
+    const currentScore = TYPE_PRIORITY[current] ?? 0;
+    const nextScore = TYPE_PRIORITY[next] ?? 0;
+
+    return nextScore > currentScore ? next : current;
+}
+
 let audioContext = null;
-let audioUnlocked = false;
 
 function getAudioContext() {
     if (! audioContext) {
@@ -63,8 +76,6 @@ async function unlockAudio() {
             return false;
         }
     }
-
-    audioUnlocked = true;
 
     return true;
 }
@@ -98,6 +109,17 @@ async function playTone(frequency, duration = 0.14, volume = 0.12) {
     oscillator.stop(now + duration);
 }
 
+const alarmState = {
+    active: false,
+    type: 'info',
+    cycleId: 0,
+    timeoutId: null,
+};
+
+function dispatchAlarmEvent(name) {
+    window.dispatchEvent(new CustomEvent(name));
+}
+
 function extractItemsFromEvent(detail) {
     if (Array.isArray(detail)) {
         if (detail[0]?.items) {
@@ -118,6 +140,87 @@ function extractItemsFromEvent(detail) {
     return [];
 }
 
+const TONE_SEQUENCES = {
+    warning: [440, 330, 440],
+    info: [523, 659],
+    success: [659, 784],
+    danger: [330, 220, 330],
+};
+
+async function playSequence(type = 'info') {
+    const sequence = TONE_SEQUENCES[type] || TONE_SEQUENCES.info;
+
+    for (const [index, frequency] of sequence.entries()) {
+        await new Promise((resolve) => {
+            setTimeout(async () => {
+                await playTone(frequency, 0.14, 0.1);
+                resolve();
+            }, index * 160);
+        });
+    }
+}
+
+function scheduleAlarmCycle(cycleId) {
+    alarmState.timeoutId = setTimeout(async () => {
+        if (! alarmState.active || cycleId !== alarmState.cycleId) {
+            return;
+        }
+
+        await playSequence(alarmState.type);
+
+        if (! alarmState.active || cycleId !== alarmState.cycleId) {
+            return;
+        }
+
+        scheduleAlarmCycle(cycleId);
+    }, 700);
+}
+
+function stopAlarm() {
+    if (! alarmState.active && ! alarmState.timeoutId) {
+        return;
+    }
+
+    alarmState.active = false;
+    alarmState.cycleId += 1;
+
+    if (alarmState.timeoutId) {
+        clearTimeout(alarmState.timeoutId);
+        alarmState.timeoutId = null;
+    }
+
+    dispatchAlarmEvent('notification-alarm-stopped');
+}
+
+async function startAlarm(type = 'info') {
+    if (! readPrefs().sound) {
+        return;
+    }
+
+    await unlockAudio();
+
+    const wasActive = alarmState.active;
+    alarmState.type = pickAlertType(alarmState.type, type);
+    alarmState.active = true;
+
+    if (wasActive) {
+        return;
+    }
+
+    alarmState.cycleId += 1;
+    const cycleId = alarmState.cycleId;
+
+    dispatchAlarmEvent('notification-alarm-started');
+
+    await playSequence(alarmState.type);
+
+    if (! alarmState.active || cycleId !== alarmState.cycleId) {
+        return;
+    }
+
+    scheduleAlarmCycle(cycleId);
+}
+
 export const NotificationCenterUtil = {
     prefs() {
         return readPrefs();
@@ -131,13 +234,23 @@ export const NotificationCenterUtil = {
         return unlockAudio();
     },
 
+    isAlarmActive() {
+        return alarmState.active;
+    },
+
+    silenceAlarm() {
+        stopAlarm();
+    },
+
     toggleSound() {
         const prefs = readPrefs();
         prefs.sound = ! prefs.sound;
         writePrefs(prefs);
 
-        if (prefs.sound) {
-            unlockAudio().then(() => this.playSound('info'));
+        if (! prefs.sound) {
+            stopAlarm();
+        } else {
+            unlockAudio().then(() => startAlarm('info'));
         }
 
         return prefs.sound;
@@ -180,29 +293,7 @@ export const NotificationCenterUtil = {
     },
 
     async playSound(type = 'info') {
-        if (! readPrefs().sound) {
-            return;
-        }
-
-        await unlockAudio();
-
-        const tones = {
-            warning: [440, 330],
-            info: [523, 659],
-            success: [659, 784],
-            danger: [330, 220],
-        };
-
-        const sequence = tones[type] || tones.info;
-
-        for (const [index, frequency] of sequence.entries()) {
-            await new Promise((resolve) => {
-                setTimeout(async () => {
-                    await playTone(frequency, 0.12, 0.1);
-                    resolve();
-                }, index * 140);
-            });
-        }
+        await startAlarm(type);
     },
 
     showPush(notification) {
@@ -222,6 +313,7 @@ export const NotificationCenterUtil = {
 
         instance.onclick = () => {
             window.focus();
+            stopAlarm();
 
             if (notification.url) {
                 window.location.href = notification.url;
@@ -271,8 +363,14 @@ export const NotificationCenterUtil = {
             return;
         }
 
+        const alertType = fresh.reduce(
+            (best, notification) => pickAlertType(best, notification.type || 'info'),
+            'info',
+        );
+
+        startAlarm(alertType);
+
         fresh.forEach((notification) => {
-            this.playSound(notification.type || 'info');
             this.showPush(notification);
             this.notifyWireui(notification);
         });
@@ -290,9 +388,9 @@ export const NotificationCenterUtil = {
 
         const sample = {
             id: `teste-${Date.now()}`,
-            type: 'info',
+            type: 'warning',
             title: 'Teste de notificação',
-            message: 'Som, push e toast estão funcionando.',
+            message: 'O alarme tocará em loop até você silenciar.',
             url: window.location.href,
         };
 
