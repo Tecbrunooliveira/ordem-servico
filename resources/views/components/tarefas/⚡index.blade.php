@@ -34,6 +34,8 @@ new class extends Component
 
     public ?int $cliente_id = null;
 
+    public string $buscaClienteForm = '';
+
     public ?int $editingId = null;
 
     public int $nextId = 9;
@@ -190,6 +192,7 @@ new class extends Component
         $this->data_vencimento = $tarefa['data_vencimento'] ?? '';
         $this->responsavel = $tarefa['responsavel'];
         $this->cliente_id = $tarefa['cliente_id'] ?? null;
+        $this->buscaClienteForm = '';
         $this->categoria = $tarefa['categoria'];
         $this->data_inicio = $tarefa['data_inicio'];
         $this->formTempoSegundos = $tarefa['tempo_segundos'];
@@ -834,6 +837,7 @@ new class extends Component
             'data_vencimento',
             'responsavel',
             'cliente_id',
+            'buscaClienteForm',
         ]);
         $this->status = TarefaStatus::Pendente->value;
         $this->prioridade = TarefaPrioridade::Media->value;
@@ -933,6 +937,70 @@ new class extends Component
         return true;
     }
 
+    /** @return array<int, array<string, mixed>> */
+    private function clientesAtivos(): array
+    {
+        return collect($this->clientes)
+            ->filter(fn (array $cliente) => $cliente['ativo'] ?? true)
+            ->sortBy('nome')
+            ->values()
+            ->all();
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function filtrarClientesPorBusca(string $busca): array
+    {
+        $busca = mb_strtolower(trim($busca));
+
+        if ($busca === '') {
+            return [];
+        }
+
+        return collect($this->clientesAtivos())
+            ->filter(function (array $cliente) use ($busca): bool {
+                if (str_contains(mb_strtolower($cliente['nome']), $busca)) {
+                    return true;
+                }
+
+                $termoDocumento = preg_replace('/\D/', '', $busca);
+
+                if ($termoDocumento === '') {
+                    return false;
+                }
+
+                $documento = preg_replace('/\D/', '', $cliente['documento'] ?? '');
+
+                return str_contains($documento, $termoDocumento);
+            })
+            ->values()
+            ->all();
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function clientesFormulario(): array
+    {
+        return $this->filtrarClientesPorBusca($this->buscaClienteForm);
+    }
+
+    public function selecionarCliente(int $id): void
+    {
+        $cliente = collect($this->clientesAtivos())->firstWhere('id', $id);
+
+        if (! $cliente) {
+            return;
+        }
+
+        $this->cliente_id = $id;
+        $this->buscaClienteForm = '';
+        $this->resetValidation('cliente_id');
+    }
+
+    public function alterarCliente(): void
+    {
+        $this->cliente_id = null;
+        $this->buscaClienteForm = '';
+    }
+
     public function with(): array
     {
         return [
@@ -940,7 +1008,8 @@ new class extends Component
             'prioridades' => TarefaPrioridade::options(),
             'categorias' => TarefaCategoria::options(),
             'recorrencias' => TarefaRecorrencia::options(),
-            'clientes' => $this->clientes,
+            'clientes' => $this->clientesAtivos(),
+            'clientesFormulario' => $this->clientesFormulario(),
             'modoSomenteLeitura' => ClienteAccess::somenteLeitura(),
             'pendentesCount' => collect($this->tarefas)->whereIn('status', ['pendente', 'em_andamento'])->count(),
             'tarefasLista' => $this->tarefasFiltradas(),
@@ -992,12 +1061,65 @@ new class extends Component
                     </div>
 
                     <div class="sm:col-span-2">
-                        <x-native-select wire:model="cliente_id" label="Cliente (opcional)">
-                            <option value="">Nenhum</option>
-                            @foreach ($clientes as $cliente)
-                                <option value="{{ $cliente['id'] }}">{{ $cliente['nome'] }}</option>
-                            @endforeach
-                        </x-native-select>
+                        <label class="mb-1 block text-sm font-medium text-gray-700">Cliente (opcional)</label>
+
+                        @if ($cliente_id)
+                            @php
+                                $clienteSelecionado = collect($clientes)->firstWhere('id', $cliente_id);
+                            @endphp
+                            <div class="flex items-start justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50/50 p-4">
+                                <div class="min-w-0">
+                                    <p class="font-medium text-slate-900">{{ $clienteSelecionado['nome'] ?? '—' }}</p>
+                                    <p class="mt-0.5 text-xs text-slate-600">{{ $clienteSelecionado['documento'] ?? 'Sem CNPJ' }}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    wire:click="alterarCliente"
+                                    class="shrink-0 text-sm font-medium text-brand-600 hover:text-brand-700"
+                                >
+                                    Alterar
+                                </button>
+                            </div>
+                        @else
+                            <x-input
+                                wire:model.live.debounce.300ms="buscaClienteForm"
+                                icon="magnifying-glass"
+                                placeholder="Razão social ou CNPJ"
+                            />
+
+                            @if ($buscaClienteForm !== '')
+                                <div class="mt-3 max-h-52 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
+                                    @forelse ($clientesFormulario as $cliente)
+                                        <button
+                                            type="button"
+                                            wire:key="tarefa-cliente-form-{{ $cliente['id'] }}"
+                                            wire:click="selecionarCliente({{ $cliente['id'] }})"
+                                            class="flex w-full items-start gap-3 rounded-lg border border-transparent bg-white p-3 text-left transition hover:border-brand-200 hover:bg-brand-50/50"
+                                        >
+                                            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">
+                                                {{ strtoupper(substr($cliente['nome'], 0, 1)) }}
+                                            </span>
+                                            <span class="min-w-0">
+                                                <span class="block truncate text-sm font-medium text-slate-900">{{ $cliente['nome'] }}</span>
+                                                <span class="mt-0.5 block text-xs text-slate-500">{{ $cliente['documento'] ?: 'Sem CNPJ' }}</span>
+                                            </span>
+                                        </button>
+                                    @empty
+                                        <div class="px-4 py-8 text-center">
+                                            <x-icon name="magnifying-glass" class="mx-auto h-7 w-7 text-slate-300" />
+                                            <p class="mt-2 text-sm text-slate-600">Nenhum cliente encontrado</p>
+                                            <p class="mt-1 text-xs text-slate-500">Tente buscar por outro nome ou CNPJ.</p>
+                                        </div>
+                                    @endforelse
+                                </div>
+                            @else
+                                <p class="mt-2 text-xs text-slate-500">Digite o nome ou CNPJ para buscar. Deixe em branco se a tarefa não for de um cliente.</p>
+                            @endif
+                        @endif
+
+                        @error('cliente_id')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <x-native-select wire:model="status" label="Status">
