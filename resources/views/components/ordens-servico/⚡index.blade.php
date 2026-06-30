@@ -1027,90 +1027,6 @@ new class extends Component
         return OrdemServicoRepository::formatHoraListagem($data, $hora);
     }
 
-    /** @return array{segundos: int, running: bool, startedAt: int|null, dotClass: string, textClass: string, label: string} */
-    public function infoCronometroListagem(array $ordem): array
-    {
-        $segundos = (int) ($ordem['tempo_segundos'] ?? 0);
-        $emExecucao = $this->ordemEmExecucao($ordem['id']);
-        $pausada = $this->ordemPausada($ordem);
-        $status = $ordem['status'];
-
-        if ($status === OrdemServicoStatus::Concluida->value) {
-            return [
-                'segundos' => $segundos,
-                'running' => false,
-                'startedAt' => null,
-                'dotClass' => 'bg-emerald-500',
-                'textClass' => 'text-emerald-700',
-                'label' => 'Concluída',
-            ];
-        }
-
-        if ($status === OrdemServicoStatus::Cancelada->value) {
-            return [
-                'segundos' => $segundos,
-                'running' => false,
-                'startedAt' => null,
-                'dotClass' => 'bg-red-400',
-                'textClass' => 'text-red-500',
-                'label' => 'Cancelada',
-            ];
-        }
-
-        if ($emExecucao) {
-            return [
-                'segundos' => $segundos,
-                'running' => true,
-                'startedAt' => $this->runningOrdemStartedAt,
-                'dotClass' => 'bg-blue-500 animate-pulse',
-                'textClass' => 'text-blue-700',
-                'label' => 'Em execução',
-            ];
-        }
-
-        if ($pausada) {
-            return [
-                'segundos' => $segundos,
-                'running' => false,
-                'startedAt' => null,
-                'dotClass' => 'bg-amber-500',
-                'textClass' => 'text-amber-700',
-                'label' => 'Pausada',
-            ];
-        }
-
-        if ($status === OrdemServicoStatus::EmAndamento->value) {
-            return [
-                'segundos' => $segundos,
-                'running' => false,
-                'startedAt' => null,
-                'dotClass' => 'bg-orange-400',
-                'textClass' => 'text-orange-600',
-                'label' => 'Interrompida',
-            ];
-        }
-
-        if ($segundos > 0) {
-            return [
-                'segundos' => $segundos,
-                'running' => false,
-                'startedAt' => null,
-                'dotClass' => 'bg-slate-400',
-                'textClass' => 'text-slate-600',
-                'label' => 'Parado',
-            ];
-        }
-
-        return [
-            'segundos' => 0,
-            'running' => false,
-            'startedAt' => null,
-            'dotClass' => 'bg-slate-300',
-            'textClass' => 'text-slate-400',
-            'label' => 'Aguardando',
-        ];
-    }
-
     private function resetForm(): void
     {
         $this->reset([
@@ -1194,6 +1110,10 @@ new class extends Component
 ?>
 
 <div>
+    @if ($runningOrdemId)
+        <div wire:poll.1s></div>
+    @endif
+
     @if ($showForm)
         <div class="mx-auto max-w-3xl">
             <div class="mb-6">
@@ -1497,7 +1417,6 @@ new class extends Component
                             <th class="px-3 py-2.5">Cliente</th>
                             <th class="px-3 py-2.5">Serviço</th>
                             <th class="whitespace-nowrap px-3 py-2.5">Agendamento</th>
-                            <th class="whitespace-nowrap px-3 py-2.5">Cronômetro</th>
                             <th class="whitespace-nowrap px-3 py-2.5">Status</th>
                             <th class="w-[5.5rem] whitespace-nowrap px-3 py-2.5 text-center">Exec.</th>
                             <th class="w-24 whitespace-nowrap px-3 py-2.5 text-right">Ações</th>
@@ -1516,7 +1435,6 @@ new class extends Component
                                 $canIniciar = ! $finalizadaLista && ! $emExecucao && in_array($ordem['status'], [\App\Enums\OrdemServicoStatus::Pendente->value, \App\Enums\OrdemServicoStatus::EmAndamento->value], true);
                                 $canPausar = $emExecucao;
                                 $canParar = ! $finalizadaLista && ($emExecucao || $pausada || ($ordem['tempo_segundos'] ?? 0) > 0);
-                                $cronometroInfo = $this->infoCronometroListagem($ordem);
                             @endphp
                             <tr
                                 wire:key="ordem-{{ $ordem['id'] }}"
@@ -1564,17 +1482,6 @@ new class extends Component
                                     <p @class(['text-xs font-medium', $dataInfo['class']])>
                                         {{ $dataInfo['label'] }}
                                     </p>
-                                </td>
-                                <td class="whitespace-nowrap px-3 py-2.5">
-                                    <x-ordem-cronometro
-                                        wire:key="cronometro-{{ $ordem['id'] }}-{{ $cronometroInfo['running'] ? 'run' : 'stop' }}-{{ $cronometroInfo['segundos'] }}"
-                                        :segundos="$cronometroInfo['segundos']"
-                                        :running="$cronometroInfo['running']"
-                                        :started-at="$cronometroInfo['startedAt']"
-                                        :dot-class="$cronometroInfo['dotClass']"
-                                        :text-class="$cronometroInfo['textClass']"
-                                        :label="$cronometroInfo['label']"
-                                    />
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-2.5">
                                     @php
@@ -1638,6 +1545,12 @@ new class extends Component
                                     @else
                                         <span class="text-xs text-slate-300">—</span>
                                     @endif
+
+                                    @if (($ordem['tempo_segundos'] ?? 0) > 0 || $emExecucao)
+                                        <p class="mt-1 font-mono text-[11px] leading-none text-slate-500">
+                                            {{ $this->tempoOrdemAtual($ordem['tempo_segundos'] ?? 0, $ordem['id']) }}
+                                        </p>
+                                    @endif
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-2.5">
                                     <div class="flex justify-end gap-1">
@@ -1669,7 +1582,7 @@ new class extends Component
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="px-5 py-12 text-center text-slate-600">
+                                <td colspan="7" class="px-5 py-12 text-center text-slate-600">
                                     @if ($this->temFiltrosAtivos())
                                         Nenhuma ordem encontrada com os filtros aplicados.
                                     @else
@@ -1681,7 +1594,7 @@ new class extends Component
                     </tbody>
                     <tfoot class="border-t border-slate-100 bg-slate-50">
                         <tr>
-                            <td colspan="8" class="px-5 py-3 text-sm text-slate-600">
+                            <td colspan="7" class="px-5 py-3 text-sm text-slate-600">
                                 @if ($this->temFiltrosAtivos())
                                     Exibindo {{ count($ordensLista) }} de {{ $totalOrdens }} {{ $totalOrdens === 1 ? 'ordem cadastrada' : 'ordens cadastradas' }}
                                 @else
