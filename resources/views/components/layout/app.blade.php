@@ -67,7 +67,7 @@
     @livewireStyles
     <link href="{{ asset('vendor/wireui/wireui.css') }}" rel="stylesheet" type="text/css">
 </head>
-<body class="h-full bg-slate-50 text-slate-800 antialiased">
+<body class="h-full overflow-x-hidden bg-slate-50 text-slate-800 antialiased">
     @if (session('show_splash'))
         <x-layout.splash />
     @endif
@@ -77,7 +77,7 @@
 
     <div
         id="app-layout-shell"
-        class="flex h-full min-h-screen"
+        class="flex h-full min-h-screen overflow-x-hidden"
         x-data="{ sidebarOpen: false }"
     >
         <div
@@ -95,10 +95,10 @@
 
         <x-layout.sidebar />
 
-        <div id="app-layout-main" class="flex min-w-0 flex-1 flex-col">
+        <div id="app-layout-main" class="flex min-w-0 flex-1 flex-col overflow-x-hidden">
             <x-layout.header :title="$title" :subtitle="$subtitle" />
 
-            <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            <main class="app-main flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8">
                 {{ $slot }}
             </main>
         </div>

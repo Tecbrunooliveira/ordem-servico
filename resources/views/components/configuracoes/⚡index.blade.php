@@ -32,6 +32,10 @@ new class extends Component
 
     public ?string $logoPreview = null;
 
+    public ?string $feedbackSucesso = null;
+
+    public ?string $feedbackErro = null;
+
     /** @var array<int, string> */
     public array $estados = [
         'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
@@ -74,7 +78,11 @@ new class extends Component
         $this->carregarEmpresa();
 
         if (session('logo_ok')) {
-            $this->notification()->success('Logo enviada', (string) session('logo_ok'));
+            $this->feedbackSucesso = (string) session('logo_ok');
+        }
+
+        if (session('logo_erro')) {
+            $this->feedbackErro = (string) session('logo_erro');
         }
     }
 
@@ -85,11 +93,15 @@ new class extends Component
         }
 
         $this->secaoEditando = $secao;
+        $this->feedbackSucesso = null;
+        $this->feedbackErro = null;
     }
 
     public function voltarLista(): void
     {
         $this->secaoEditando = null;
+        $this->feedbackSucesso = null;
+        $this->feedbackErro = null;
         $this->resetValidation();
     }
 
@@ -138,11 +150,8 @@ new class extends Component
         $this->logoPreview = null;
         EmpresaConfig::removeLogo();
 
-        $this->notification()->send([
-            'icon' => 'success',
-            'title' => 'Logo removido',
-            'timeout' => 3000,
-        ]);
+        $this->feedbackErro = null;
+        $this->feedbackSucesso = 'Logo removida com sucesso.';
     }
 
     public function salvarEmpresa(): void
@@ -163,7 +172,9 @@ new class extends Component
             'site' => $this->site,
         ]);
 
-        $this->notification()->success('Configurações salvas', 'Os dados da empresa foram atualizados.');
+        $this->feedbackErro = null;
+        $this->feedbackSucesso = 'Os dados da empresa foram atualizados.';
+        $this->notification()->success('Configurações salvas', $this->feedbackSucesso);
         $this->carregarEmpresa();
     }
 
@@ -188,25 +199,45 @@ new class extends Component
 
 <div>
     @if ($secaoEditando === 'empresa')
-        <div class="mb-6">
+        <div class="mb-4 sm:mb-6">
             <button
                 type="button"
                 wire:click="voltarLista"
-                class="mb-4 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-[#004200]"
+                class="app-touch-target mb-4 inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-[#004200]"
             >
                 <x-icon name="arrow-left" class="h-4 w-4" />
                 Voltar para configurações
             </button>
 
-            <h2 class="text-lg font-semibold text-slate-900">Dados da empresa</h2>
-            <p class="text-sm text-slate-600">Informações exibidas em documentos, relatórios e comunicações do sistema.</p>
+            <h2 class="text-lg font-semibold text-slate-900 sm:text-xl">Dados da empresa</h2>
+            <p class="mt-1 text-sm text-slate-600">Informações exibidas em documentos, relatórios e comunicações do sistema.</p>
         </div>
 
-        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        @if ($feedbackSucesso)
+            <div class="app-flash app-flash--success mb-4" role="status">
+                <x-icon name="check-circle" class="app-flash__icon" />
+                <p>{{ $feedbackSucesso }}</p>
+            </div>
+        @endif
+
+        @if ($feedbackErro)
+            <div class="app-flash app-flash--error mb-4" role="alert">
+                <x-icon name="exclamation-circle" class="app-flash__icon" />
+                <p>{{ $feedbackErro }}</p>
+            </div>
+        @endif
+
+        @if ($errors->has('logo'))
+            <div class="app-flash app-flash--error mb-4" role="alert">
+                <x-icon name="exclamation-circle" class="app-flash__icon" />
+                <p>{{ $errors->first('logo') }}</p>
+            </div>
+        @endif
+
+        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <form id="empresa-dados-form" wire:submit="salvarEmpresa">
-                <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
-                    <div class="lg:col-span-2">
-                        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div class="grid grid-cols-1 gap-5">
+                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                         <div class="sm:col-span-2">
                             <x-cnpj-lookup-field
                                 wire-model="cnpj"
@@ -268,7 +299,7 @@ new class extends Component
                 @csrf
 
                 <label class="mb-2 block text-sm font-medium text-gray-700">Logo</label>
-                <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 sm:p-4">
                     <div class="mb-4 flex min-h-[8rem] items-center justify-center rounded-lg border border-slate-200 bg-white p-4">
                         @if ($logoPreview)
                             <img
@@ -284,23 +315,18 @@ new class extends Component
                         @endif
                     </div>
 
-                    <input
-                        type="file"
-                        name="logo"
-                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                        class="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-600"
-                        onchange="if (this.files.length) this.form.submit()"
-                    >
+                    <label class="app-file-upload">
+                        <span class="app-action-btn app-action-btn--secondary w-full sm:w-auto">Selecionar imagem</span>
+                        <input
+                            type="file"
+                            name="logo"
+                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                            class="sr-only"
+                            onchange="if (this.files.length) this.form.submit()"
+                        >
+                    </label>
 
-                    @if ($errors->has('logo'))
-                        <p class="mt-2 text-xs text-red-600">{{ $errors->first('logo') }}</p>
-                    @endif
-
-                    @if (session('logo_erro'))
-                        <p class="mt-2 text-xs text-red-600">{{ session('logo_erro') }}</p>
-                    @endif
-
-                    <p class="mt-2 text-xs text-slate-500">
+                    <p class="mt-2 text-xs leading-relaxed text-slate-500">
                         PNG, JPG ou SVG. Máximo 5 MB. Recomendado: 240×80 px (horizontal) ou 128×128 px (quadrada), fundo transparente.
                     </p>
 
@@ -308,7 +334,7 @@ new class extends Component
                         <button
                             type="button"
                             wire:click="removerLogo"
-                            class="mt-3 text-sm font-medium text-red-600 hover:text-red-700"
+                            class="app-touch-target mt-3 text-sm font-medium text-red-600 hover:text-red-700"
                         >
                             Remover logo
                         </button>
@@ -316,9 +342,21 @@ new class extends Component
                 </div>
             </form>
 
-            <div class="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5">
-                <x-button flat label="Cancelar" wire:click="voltarLista" />
-                <x-button primary type="submit" form="empresa-dados-form" icon="check" label="Salvar configurações" />
+            <div class="app-action-bar mt-6 border-t border-slate-100 pt-5">
+                <button
+                    type="button"
+                    wire:click="voltarLista"
+                    class="app-action-btn app-action-btn--secondary"
+                >
+                    Cancelar
+                </button>
+                <button
+                    type="submit"
+                    form="empresa-dados-form"
+                    class="app-action-btn app-action-btn--primary"
+                >
+                    Salvar configurações
+                </button>
             </div>
         </div>
     @else
@@ -337,7 +375,7 @@ new class extends Component
                         <button
                             type="button"
                             wire:click="editarSecao('{{ $secao['value'] }}')"
-                            class="flex w-full items-start gap-4 px-5 py-4 text-left transition hover:bg-[#005300]/5"
+                            class="app-touch-target flex w-full items-start gap-4 px-4 py-4 text-left transition hover:bg-[#005300]/5 sm:px-5"
                         >
                             <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#005300]/10 text-[#005300] ring-1 ring-[#005300]/15">
                                 <x-icon :name="$secao['icon']" class="h-5 w-5" />
