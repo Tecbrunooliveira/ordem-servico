@@ -690,6 +690,138 @@ document.addEventListener('alpine:init', () => {
             this.content = html === '<br>' ? '' : html;
         },
 
+        async onBlur() {
+            await this.replaceEmbeddedImages();
+            this.sync();
+        },
+
+        async onPaste(event) {
+            const clipboard = event.clipboardData;
+
+            if (! clipboard) {
+                return;
+            }
+
+            const imageItems = Array.from(clipboard.items).filter((item) => item.type.startsWith('image/'));
+
+            if (imageItems.length > 0) {
+                event.preventDefault();
+
+                for (const item of imageItems) {
+                    const file = item.getAsFile();
+
+                    if (! file) {
+                        continue;
+                    }
+
+                    try {
+                        const data = await this.uploadFile(this.nameClipboardFile(file, item.type));
+
+                        if (data?.url) {
+                            this.insertHtml(`<img src="${data.url}" alt="Imagem" class="repositorio-media repositorio-media--image">`);
+                        }
+                    } catch (error) {
+                        window.alert('Não foi possível enviar a imagem colada.');
+                    }
+                }
+
+                return;
+            }
+
+            const html = clipboard.getData('text/html');
+
+            if (html && html.includes('data:image')) {
+                event.preventDefault();
+
+                try {
+                    await this.insertSanitizedHtml(html);
+                } catch (error) {
+                    window.alert('Não foi possível processar o conteúdo colado.');
+                }
+            }
+        },
+
+        nameClipboardFile(file, mimeType) {
+            if (file.name && file.name !== 'image.png') {
+                return file;
+            }
+
+            const extension = (mimeType.split('/')[1] || 'png').replace('jpeg', 'jpg');
+
+            return new File([file], `colagem-${Date.now()}.${extension}`, { type: mimeType || file.type });
+        },
+
+        async dataUrlToFile(dataUrl) {
+            const response = await fetch(dataUrl);
+            const blob = await response.blob();
+            const extension = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+
+            return new File([blob], `colagem-${Date.now()}.${extension}`, { type: blob.type || 'image/png' });
+        },
+
+        async insertSanitizedHtml(html) {
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const images = doc.querySelectorAll('img[src^="data:"]');
+
+            for (const image of images) {
+                const source = image.getAttribute('src');
+
+                if (! source) {
+                    continue;
+                }
+
+                try {
+                    const file = await this.dataUrlToFile(source);
+                    const data = await this.uploadFile(file);
+
+                    if (data?.url) {
+                        image.setAttribute('src', data.url);
+                        image.classList.add('repositorio-media', 'repositorio-media--image');
+                    } else {
+                        image.remove();
+                    }
+                } catch (error) {
+                    image.remove();
+                }
+            }
+
+            const cleanHtml = doc.body.innerHTML.trim();
+
+            if (cleanHtml !== '') {
+                this.insertHtml(cleanHtml);
+            }
+        },
+
+        async replaceEmbeddedImages() {
+            if (! this.$refs.editor) {
+                return;
+            }
+
+            const images = this.$refs.editor.querySelectorAll('img[src^="data:"]');
+
+            for (const image of images) {
+                const source = image.getAttribute('src');
+
+                if (! source) {
+                    continue;
+                }
+
+                try {
+                    const file = await this.dataUrlToFile(source);
+                    const data = await this.uploadFile(file);
+
+                    if (data?.url) {
+                        image.setAttribute('src', data.url);
+                        image.classList.add('repositorio-media', 'repositorio-media--image');
+                    } else {
+                        image.remove();
+                    }
+                } catch (error) {
+                    image.remove();
+                }
+            }
+        },
+
         exec(command) {
             if (! this.$refs.editor) {
                 return;

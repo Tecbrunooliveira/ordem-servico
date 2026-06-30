@@ -64,7 +64,8 @@
             x-ref="editor"
             contenteditable="true"
             x-on:input="sync()"
-            x-on:blur="sync()"
+            x-on:blur="onBlur()"
+            x-on:paste="onPaste($event)"
             data-placeholder="{{ $placeholder }}"
             class="rich-text-editor__content repositorio-rich-content {{ $minHeight }} px-4 py-3 text-sm text-slate-900 outline-none"
         ></div>

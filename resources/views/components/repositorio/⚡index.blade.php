@@ -43,8 +43,8 @@ new class extends Component
         return [
             'titulo' => ['required', 'string', 'max:255'],
             'sistema_id' => ['required', 'integer', 'in:'.$sistemaIds],
-            'descricao_erro' => ['required', 'string', 'max:50000'],
-            'solucao' => ['nullable', 'string', 'max:50000'],
+            'descricao_erro' => ['required', 'string', 'max:200000'],
+            'solucao' => ['nullable', 'string', 'max:200000'],
         ];
     }
 
