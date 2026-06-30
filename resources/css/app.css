@@ -23,8 +23,11 @@
     --color-brand-800: #1e40af;
     --color-brand-900: #1e3a8a;
 
-    --color-sidebar: #0f172a;
-    --color-sidebar-text: #cbd5e1;
+    --color-sidebar-from: #005300;
+    --color-sidebar-via: #004200;
+    --color-sidebar-to: #005A00;
+    --color-sidebar: #004200;
+    --color-sidebar-text: rgba(255, 255, 255, 0.78);
 
     --color-positive-50: #ecfdf5;
     --color-positive-100: #d1fae5;
@@ -110,9 +113,13 @@
     transition: transform 0.45s ease, opacity 0.45s ease;
 }
 
+#app-sidebar {
+    background: linear-gradient(to bottom right, var(--color-sidebar-from), var(--color-sidebar-via), var(--color-sidebar-to));
+}
+
 .sidebar-nav {
     scrollbar-width: thin;
-    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
     overscroll-behavior: contain;
 }
 
@@ -222,16 +229,16 @@
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb {
-    background-color: rgba(148, 163, 184, 0.2);
+    background-color: rgba(255, 255, 255, 0.18);
     border-radius: 9999px;
 }
 
 .sidebar-nav:hover::-webkit-scrollbar-thumb {
-    background-color: rgba(148, 163, 184, 0.45);
+    background-color: rgba(255, 255, 255, 0.35);
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb:active {
-    background-color: rgba(148, 163, 184, 0.6);
+    background-color: rgba(255, 255, 255, 0.5);
 }
 
 @supports (scrollbar-gutter: stable) {

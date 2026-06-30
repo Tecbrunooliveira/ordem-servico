@@ -8,7 +8,7 @@
 
 <div
     id="app-splash"
-    class="app-splash fixed inset-0 z-[200] flex flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-[#005300] via-[#004200] to-[#005A00] px-6"
+    class="app-splash fixed inset-0 z-[200] flex flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-[var(--color-sidebar-from)] via-[var(--color-sidebar-via)] to-[var(--color-sidebar-to)] px-6"
     role="status"
     aria-live="polite"
     aria-label="Carregando sistema"
